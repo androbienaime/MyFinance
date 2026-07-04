@@ -30,6 +30,11 @@ class Transaction extends Model
         'status' => TransactionStatus::class,
     ];
 
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(TransactionApproval::class);
+    }
+    
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
@@ -40,10 +45,7 @@ class Transaction extends Model
         return $this->belongsTo(Account::class);
     }
 
-    public function approvals(): HasMany
-    {
-        return $this->hasMany(TransactionApproval::class);
-    }
+
 
     public static function generateUniqueCode(int $attempts = 5): string
     {
