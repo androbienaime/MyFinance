@@ -14,11 +14,13 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, InteractsWithAppAuthentication, InteractsWithAppAuthenticationRecovery;
+    use HasFactory, Notifiable, InteractsWithAppAuthentication, 
+    InteractsWithAppAuthenticationRecovery, HasRoles;
 
     protected $fillable = [
         'name',
@@ -55,7 +57,12 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     }
 
     public function employee(): HasOne
-{
-    return $this->hasOne(Employee::class);
-}
+    {
+        return $this->hasOne(Employee::class);
+    }
+
+    public function isHeadOffice(): bool
+    {
+        return $this->can('system.full-access');
+    }
 }
