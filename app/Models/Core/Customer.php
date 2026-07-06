@@ -38,6 +38,12 @@ class Customer extends Model
         return $this->hasMany(Account::class);
     }
 
+    // Dans chaque modèle qui peut avoir des adresses
+    public function addresses()
+    {
+        return $this->morphMany(Address::class, 'addressable');
+    }
+
     /**
      * Visibilite globale volontaire : un client cree dans une autre
      * succursale reste visible, mais ceux de la succursale/l'employe

@@ -65,4 +65,10 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     {
         return $this->can('system.full-access');
     }
+    
+    public function currentBranchId(): ?int
+    {
+        return $this->employee?->branch_id;
+    }
+    
 }

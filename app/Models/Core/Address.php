@@ -38,4 +38,9 @@ class Address extends Model
     public function city() : BelongsTo{
         return $this->belongsTo(City::class);
     }
+
+     public function addressable()
+    {
+        return $this->morphTo();
+    }
 }

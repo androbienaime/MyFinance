@@ -27,6 +27,8 @@ class PermissionSeeder extends Seeder
             'approval-thresholds.manage',
             'roles.manage',
             'reports.view',
+            'users.view', 'users.create', 'users.update', 'users.toggle-active',
+            'types_of_accounts.view', 'types_of_accounts.create', 'types_of_accounts.update',
         ];
 
         foreach ($permissions as $permission) {
