@@ -5,6 +5,7 @@ namespace App\Models\Core;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -40,6 +41,19 @@ class Account extends Model
         return $this->hasMany(Transaction::class);
     }
 
+    public function people() : BelongsToMany
+    {
+        return $this->belongsToMany(Person::class, 'account_person')
+            ->withPivot([
+                'role',
+                'permissions',
+                'share_percentage',
+                'start_date',
+                'end_date',
+                'is_active'
+            ])
+            ->withTimestamps();
+    }
     /**
      * Insertion optimiste + retry sur collision, plutot qu'un
      * "check puis create" separe qui est vulnerable a une double

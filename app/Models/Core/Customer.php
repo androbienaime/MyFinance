@@ -38,6 +38,11 @@ class Customer extends Model
         return $this->hasMany(Account::class);
     }
 
+    public function person() : BelongsTo
+    {
+        return $this->belongsTo(Person::class);
+    }
+
     // Dans chaque modèle qui peut avoir des adresses
     public function addresses()
     {
