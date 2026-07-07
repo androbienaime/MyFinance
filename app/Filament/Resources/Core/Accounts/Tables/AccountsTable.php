@@ -1,17 +1,18 @@
 <?php
 
-namespace App\Filament\Resources\Core\Customers\Tables;
+namespace App\Filament\Resources\Core\Accounts\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
-class CustomersTable
+class AccountsTable
 {
     public static function configure(Table $table): Table
     {
@@ -19,29 +20,19 @@ class CustomersTable
             ->columns([
                 TextColumn::make('code')
                     ->searchable(),
-                TextColumn::make('person.full_name')
+                TextColumn::make('typeOfAccount.name')
+                    ->searchable(),
+                TextColumn::make('customer.person.full_name')
                     ->label(__('Full name'))
                     ->searchable(),
-                TextColumn::make('person.gender')
-                    ->label(__('gender'))
-                    ->searchable(),
-                TextColumn::make('person.identityDocuments.document_number')
-                    ->label(__('identity number'))
-                    ->searchable(),
-                TextColumn::make('person.addresses.phone')
-                    ->label(__('Phone Number'))
-                    ->searchable(),
-                TextColumn::make('accounts_count')
-                    ->badge()
-                    ->counts('accounts')
-                    ->label(__('Number of accounts')),
-                
+                TextColumn::make('balance')
+                    ->numeric()
+                    ->sortable(),
                 TextColumn::make('employee.first_name')
                     ->label(__('Employee'))
                     ->searchable(),
-                TextColumn::make('person.addresses.city.name')
-                    ->label(__('City'))
-                    ->searchable(),
+                IconColumn::make('is_active')
+                    ->boolean(),
                 TextColumn::make('deleted_at')
                     ->dateTime()
                     ->sortable()

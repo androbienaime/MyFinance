@@ -6,7 +6,18 @@ use Illuminate\Database\Eloquent\Model;
 
 class AccountPerson extends Model
 {
-    protected $table = 'account_person';
+    protected $table = 'account_people';
+
+    protected $fillable = [
+        'account_id',
+        'person_id',
+        'role',
+        'permissions',
+        'share_percentage',
+        'start_date',
+        'end_date',
+        'is_active'
+    ];
 
     protected $casts = [
         'permissions' => 'array',

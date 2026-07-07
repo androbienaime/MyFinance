@@ -4,6 +4,8 @@ namespace App\Filament\Resources\Core\Customers\Pages;
 
 use App\Filament\Resources\Core\Customers\CustomerResource;
 use App\Models\Core\Account;
+use App\Models\Core\AccountPerson;
+use App\Models\Core\Person;
 use App\Models\Core\TypeOfAccount;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\CreateRecord;
@@ -17,31 +19,46 @@ class CreateCustomer extends CreateRecord
 {
     protected static string $resource = CustomerResource::class;
 
-
-    /**
-     * Stocke le code du compte cree pour l'afficher dans le modal
-     * juste apres la sauvegarde (voir afterCreate() plus bas).
-     */
     public ?string $createdAccountCode = null;
 
-    protected function handleRecordCreation(array $data): Model
+    // Stocke les champs "hors relation Person" retires du formulaire,
+    // pour les reutiliser dans afterCreate() une fois le Customer
+    // (et son Person/addresses) deja sauvegardes par Filament.
+    protected ?int $pendingTypeOfAccountId = null;
+    protected array $pendingAdditionalPeople = [];
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        $this->pendingTypeOfAccountId = $data['type_of_account_id'] ?? null;
+        $this->pendingAdditionalPeople = $data['additional_account_people'] ?? [];
+
+        // On retire ces cles : elles n'appartiennent ni a Customer ni a
+        // Person, Filament ne doit pas essayer de les sauvegarder lui-meme.
+        unset($data['type_of_account_id'], $data['additional_account_people']);
+
+        $data['code'] = 'CL-'.strtoupper(uniqid());
+        $data['employee_id'] = Auth::user()->employee?->id;
+
+        return $data;
+    }
+
+    /**
+     * A ce stade, Filament a deja cree Person (+ addresses) ET Customer
+     * (avec person_id correctement rempli) automatiquement, grace a
+     * ->relationship('person') dans CustomerForm. Il ne reste plus qu'a
+     * gerer ce qui n'est pas une relation Eloquent standard : le compte
+     * et les personnes additionnelles.
+     */
+    protected function afterCreate(): void
     {
         if (! Auth::user()->can('create', Account::class)) {
             throw new AuthorizationException('Vous n\'avez pas le droit de creer un compte.');
         }
 
-        return DB::transaction(function () use ($data) {
-            $typeOfAccount = TypeOfAccount::findOrFail($data['type_of_account_id']);
-            // $initialBalance = $data['initial_balance'];
-
-            $data['employee_id'] = Auth::user()->employee?->id;
-
-            // Retire les champs "compte" avant de creer le Customer -
-            // ils n'appartiennent pas a cette table.
-            unset($data['type_of_account_id']);
-            $data['code'] = 'CL-'.strtoupper(uniqid());
-
-            $customer = static::getModel()::create($data);
+        DB::transaction(function () {
+            $customer = $this->record;
+            $employeeId = Auth::user()->employee?->id;
+            $typeOfAccount = TypeOfAccount::findOrFail($this->pendingTypeOfAccountId);
 
             $account = Account::create([
                 'code' => Account::generateUniqueCode($typeOfAccount),
@@ -49,21 +66,44 @@ class CreateCustomer extends CreateRecord
                 'customer_id' => $customer->id,
                 'balance' => 0,
                 'is_active' => true,
-                'employee_id' => Auth::user()->employee?->id,
+                'employee_id' => $employeeId,
             ]);
 
+            // Le titulaire principal (deja cree par Filament via la
+            // relation 'person') devient automatiquement "owner".
+            AccountPerson::create([
+                'account_id' => $account->id,
+                'person_id' => $customer->person_id,
+                'role' => 'owner',
+                'permissions' => ['view', 'withdraw', 'deposit'],
+                'is_active' => true,
+            ]);
+
+            foreach ($this->pendingAdditionalPeople as $item) {
+                $person = Person::create([
+                    'first_name' => $item['first_name'],
+                    'last_name' => $item['last_name'],
+                    'gender' => $item['gender'] ?? null,
+                    'employee_id' => $employeeId,
+                ]);
+
+                AccountPerson::create([
+                    'account_id' => $account->id,
+                    'person_id' => $person->id,
+                    'role' => $item['role'],
+                    'share_percentage' => $item['share_percentage'] ?? null,
+                    'permissions' => match ($item['role']) {
+                        'co_owner' => ['view', 'withdraw', 'deposit'],
+                        'attorney' => ['view', 'withdraw'],
+                        default => ['view'],
+                    },
+                    'is_active' => true,
+                ]);
+            }
+
             $this->createdAccountCode = $account->code;
-
-            return $customer;
         });
-    }
 
-    /**
-     * Declenche le modal juste apres la sauvegarde reussie, avant la
-     * redirection habituelle vers la liste.
-     */
-    protected function afterCreate(): void
-    {
         $this->mountAction('accountCreatedModal');
     }
 

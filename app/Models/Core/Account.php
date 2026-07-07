@@ -19,6 +19,7 @@ class Account extends Model
         'customer_id',
         'balance',
         'is_active',
+        'employee_id',
     ];
 
     protected $casts = [
@@ -26,6 +27,7 @@ class Account extends Model
         'is_active' => 'boolean',
     ];
 
+    
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
@@ -54,6 +56,11 @@ class Account extends Model
             ])
             ->withTimestamps();
     }
+
+    public function accountPeople(): HasMany
+    {
+        return $this->hasMany(AccountPerson::class);
+    }
     /**
      * Insertion optimiste + retry sur collision, plutot qu'un
      * "check puis create" separe qui est vulnerable a une double
@@ -62,7 +69,7 @@ class Account extends Model
     public static function generateUniqueCode(TypeOfAccount $typeOfAccount, int $attempts = 5): string
     {
         for ($i = 0; $i < $attempts; $i++) {
-            $candidate = $typeOfAccount->prefix.'-'.random_int(1000, 999999);
+            $candidate = $typeOfAccount->prefix.'-'.random_int(1000, 9999);
 
             if (! static::withTrashed()->where('code', $candidate)->exists()) {
                 return $candidate;
