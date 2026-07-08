@@ -27,20 +27,23 @@ class Account extends Model
         'is_active' => 'boolean',
     ];
 
-    
-    public function customer(): BelongsTo
-    {
-        return $this->belongsTo(Customer::class);
-    }
-
     public function typeOfAccount(): BelongsTo
     {
         return $this->belongsTo(TypeOfAccount::class);
     }
 
+    public function tagsPayments(): HasMany{
+        return $this->hasMany(TagsPayment::class);
+    }
+
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class)->withTrashed();
     }
 
     public function people() : BelongsToMany

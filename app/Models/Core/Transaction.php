@@ -45,7 +45,7 @@ class Transaction extends Model
         return $this->belongsTo(Account::class);
     }
 
-
+   
 
     public static function generateUniqueCode(int $attempts = 5): string
     {

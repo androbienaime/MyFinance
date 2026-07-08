@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Policies\RolePolicy;
+use Filament\Support\Assets\Js;
+use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -16,7 +18,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        FilamentAsset::register([
+            Js::make('case-grid', resource_path('js/filament/case-grid.js')),
+        ]);
     }
 
     /**
