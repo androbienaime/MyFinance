@@ -19,13 +19,32 @@
          ici, taper ici selectionne la case correspondante (meme tableau
          "selected" des deux cotes, donc synchro automatique). --}}
     <div class="mb-4">
-        <label class="text-xs font-bold uppercase text-gray-600">Nombres</label>
+        <div class="flex items-center justify-between">
+            <label class="text-xs font-bold uppercase text-gray-600">Nombres</label>
+            <button
+                type="button"
+                @click="selected = []"
+                x-show="selected.length > 0"
+                class="text-xs font-medium text-red-600 hover:text-red-700 hover:underline focus:outline-none"
+            >
+                Réinitialiser
+            </button>
+        </div>
         <div class="appearance-none block w-full bg-gray-200 text-gray-700 border rounded p-2">
-            <div class="tags-input">
-                <template x-for="n in selected" :key="n">
-                    <span class="tags-input-tag">
+            <div class="tags-input flex flex-wrap gap-1.5">
+                <template x-for="n in selected" :key="n" >
+                    <span
+                        class="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white shadow-sm"
+                    >
                         <span x-text="n"></span>
-                        <button type="button" class="tags-input-remove" @click="toggle(n)">&times;</button>
+
+                        <button
+                            type="button"
+                            @click="toggle(n)"
+                            class="ml-0.5 text-white/90 hover:text-white focus:outline-none"
+                        >
+                            &times;
+                        </button>
                     </span>
                 </template>
 

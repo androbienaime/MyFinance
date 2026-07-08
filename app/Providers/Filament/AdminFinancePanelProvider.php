@@ -28,6 +28,7 @@ class AdminFinancePanelProvider extends PanelProvider
             ->default()
             ->id('adminFinance')
             ->path('adminFinance')
+            ->viteTheme('resources/css/filament/adminFinance/theme.css')
             ->brandName("LTFINANCE")
             ->login()
             ->colors([
