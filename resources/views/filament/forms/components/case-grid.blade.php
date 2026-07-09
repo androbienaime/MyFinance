@@ -6,24 +6,30 @@
 @endphp
 
 <div
+    {{-- Attribut stable, non templated par une valeur qui peut changer
+         (contrairement au wire:key) : c'est ce que le bouton "Enregistrer"
+         utilise pour retrouver ce composant et lire 'selected' au moment
+         de la soumission, via Alpine.$data(). --}}
+    data-case-grid-root
+    data-state-path="{{ $statePath }}"
     wire:key="case-grid-{{ $get('account_code') }}-{{ $duration }}"
     x-data="caseGrid({
         duration: {{ $duration }},
         price: {{ $price }},
         paid: @js($paidTags),
-        statePath: @js($statePath),
     })"
-    x-init="init()"
+    x-on:generate-cases.window="generate($event.detail.amount)"
 >
     {{-- Champ "Nombres" : juste sous le Montant. Cliquer une case l'ajoute
          ici, taper ici selectionne la case correspondante (meme tableau
-         "selected" des deux cotes, donc synchro automatique). --}}
+         "selected" des deux cotes, donc synchro automatique en local,
+         sans aucune requete reseau). --}}
     <div class="mb-4">
         <div class="flex items-center justify-between">
             <label class="text-xs font-bold uppercase text-gray-600">Nombres</label>
             <button
                 type="button"
-                @click="selected = []"
+                @click="reset()"
                 x-show="selected.length > 0"
                 class="text-xs font-medium text-red-600 hover:text-red-700 hover:underline focus:outline-none"
             >
@@ -32,9 +38,10 @@
         </div>
         <div class="appearance-none block w-full bg-gray-200 text-gray-700 border rounded p-2">
             <div class="tags-input flex flex-wrap gap-1.5">
-                <template x-for="n in selected" :key="n" >
+                <template x-for="(n, index) in selected" :key="n">
                     <span
-                        class="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white shadow-sm"
+                        class="inline-flex items-center gap-1 rounded-md px-2.5 bg-blue-500 py-1 text-xs font-medium text-white shadow-sm"
+                        :class="tagColor(index)"
                     >
                         <span x-text="n"></span>
 

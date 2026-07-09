@@ -8,6 +8,8 @@ use App\Filament\Pages\Concerns\TransactionsTableTrait;
 use App\Models\Core\Account;
 use App\Models\Core\Transaction;
 use BackedEnum;
+use Filament\Actions\Action as ActionsAction;
+use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ViewField;
 use Filament\Notifications\Notification;
@@ -107,7 +109,7 @@ class DepositPage extends Page implements HasSchemas, HasTable
                             $set('active_case_payments', $usesCases);
                             $set('case_price', (float) $account->typeOfAccount->price);
                             $set('case_duration', (int) $account->typeOfAccount->duration);
-                            $set('paid_tags', $account->tagsPayments->pluck('tag')->values()->all());
+                            $set('paid_tags', $account->tagsPayments->pluck('tags')->values()->all());
                             $set('tags', []);
                         }),
 
@@ -146,12 +148,33 @@ class DepositPage extends Page implements HasSchemas, HasTable
                         ->required()
                         ->prefix('HTG')
                         ->columnSpanFull()
-                        // Cache pour un compte a cases : le montant y est
-                        // toujours deduit des cases cochees, jamais saisi
-                        // librement (voir submitTransaction() plus bas).
                         // Impossible de saisir un montant sur un compte
-                        // desactive.
-                        ->disabled(fn (Get $get) => $get('account_active') === false),
+                        // desactive. Pour un compte a cases, le champ reste
+                        // actif : il sert (1) d'affichage en lecture reactive
+                        // du total des cases cochees (mis a jour par Alpine
+                        // via $wire.set depuis case-grid.js), et (2) de champ
+                        // de saisie du montant cible pour le bouton
+                        // "Generer" ci-dessous. Le montant final n'est de
+                        // toute facon JAMAIS pris depuis ce champ pour un
+                        // compte a cases : voir submitTransaction().
+                        ->disabled(fn (Get $get) => $get('account_active') === false)
+                        ->suffixAction(
+                            ActionsAction::make('generateCases')
+                                ->label('Generer')
+                                ->icon('heroicon-o-cog-6-tooth')
+                                ->visible(fn (Get $get) => $get('active_case_payments')
+                                    && $get('account_active') !== false)
+                                ->action(function (Get $get, $livewire) {
+                                    // Dispatche un evenement navigateur global,
+                                    // capte par Alpine (x-on:generate-cases.window)
+                                    // dans case-grid.blade.php, qui vit dans un
+                                    // autre scope Alpine (ViewField 'tags').
+                                    $livewire->dispatch(
+                                        'generate-cases',
+                                        amount: (float) ($get('amount') ?? 0),
+                                    );
+                                }),
+                        ),
                     ]),
 
             ViewField::make('tags')
@@ -193,23 +216,23 @@ class DepositPage extends Page implements HasSchemas, HasTable
             return;
         }
 
-        $usesCases = (bool) ($state['active_case_payments'] ?? false);
-        $tags = ! empty($state['tags']) ? array_map('intval', $state['tags']) : null;
+        // $usesCases = (bool) ($state['active_case_payments'] ?? false);
+        // $tags = ! empty($state['tags']) ? array_map('intval', $state['tags']) : null;
 
         // Point de securite : pour un compte a cases, le montant n'est
         // JAMAIS pris depuis $state['amount'] (calcul cote client, donc
         // manipulable) - il est toujours recalcule ici a partir du prix
         // reel de la case et du nombre de cases cochees.
-        $amount = $usesCases
-            ? (float) ($tags ? array_sum($tags) * ($this->getCasePrice($state['account_code']) ?? 0) : 0)
-            : (float) ($state['amount'] ?? 0);
+        // $amount = $usesCases
+        //     ? (float) ($tags ? array_sum($tags) * ($this->getCasePrice($state['account_code']) ?? 0) : 0)
+        //     : (float) ($state['amount'] ?? 0);
 
         try {
             $transaction = app(DepositAction::class)->handle(
                 $state['account_code'],
-                $amount,
+                (float) ($state['amount'] ?? 0), // ignore par l'Action si le compte utilise les cases
                 $employee,
-                $tags
+                ($state['tags'])
             );
 
             Notification::make()->title("Depot {$transaction->code} enregistre.")->success()->send();

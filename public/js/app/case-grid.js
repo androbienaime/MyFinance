@@ -1,16 +1,31 @@
-window.caseGrid = function ({ duration, price, paid, statePath }) {
+window.caseGrid = function ({ duration, price, paid }) {
     return {
         duration,
         price,
         paid,
-        statePath,
         selected: [],
         targetAmount: null,
         manualInput: '',
 
-        init() {
-            this.selected = [];
-        },
+        // Palette cyclique pour styliser les tags (type Spatie tags).
+        tagPalette: [
+            'bg-indigo-500',
+            'bg-emerald-500',
+            'bg-amber-500',
+            'bg-rose-500',
+            'bg-sky-500',
+            'bg-fuchsia-500',
+            'bg-teal-500',
+            'bg-orange-500',
+        ],
+
+        // Plus de init() qui touche $wire, plus de sync() du tout ici.
+        // 'selected' est 100% local pendant toute l'interaction - rien ne
+        // peut l'ecraser depuis une reponse serveur puisqu'il n'y a plus
+        // AUCUNE requete reseau declenchee par un clic sur une case. La
+        // synchro vers Livewire se fait une seule fois, juste avant l'envoi
+        // du formulaire (voir deposit-page.blade.php : le bouton
+        // "Enregistrer" lit directement selected via Alpine.$data()).
 
         get months() {
             return Array.from({ length: this.duration }, (_, i) => i + 1);
@@ -25,18 +40,22 @@ window.caseGrid = function ({ duration, price, paid, statePath }) {
             return this.selected.reduce((sum, n) => sum + n * this.price, 0);
         },
 
-        sync() {
-            this.$wire.set(this.statePath, this.selected);
+        tagColor(index) {
+            return this.tagPalette[index % this.tagPalette.length];
         },
 
         toggle(n) {
             if (this.paid.includes(n)) return;
+
             if (this.selected.includes(n)) {
                 this.selected = this.selected.filter(x => x !== n);
             } else {
                 this.selected.push(n);
             }
-            this.sync();
+        },
+
+        reset() {
+            this.selected = [];
         },
 
         addManual() {
@@ -54,7 +73,6 @@ window.caseGrid = function ({ duration, price, paid, statePath }) {
             }
 
             this.manualInput = '';
-            this.sync();
         },
 
         addCase(n) {
@@ -65,8 +83,8 @@ window.caseGrid = function ({ duration, price, paid, statePath }) {
             this.selected.push(n);
         },
 
-        generate() {
-            const target = parseInt(this.targetAmount, 10);
+        generate(externalTarget = null) {
+            const target = parseInt(externalTarget ?? this.targetAmount, 10);
             if (!target || target <= 0) return;
 
             const max = this.duration * 30;
@@ -101,10 +119,6 @@ window.caseGrid = function ({ duration, price, paid, statePath }) {
             for (const n of reachable[bestSum]) this.addCase(n);
 
             this.targetAmount = null;
-            this.sync();
         },
     };
 };
-
-
-// alert(window.caseGrid(3, 50, 2500, ''));

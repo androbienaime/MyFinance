@@ -45,6 +45,10 @@ class Transaction extends Model
         return $this->belongsTo(Account::class);
     }
 
+    public function tagsPayments(): HasMany
+    {
+        return $this->hasMany(TagsPayment::class);
+    }
    
 
     public static function generateUniqueCode(int $attempts = 5): string
