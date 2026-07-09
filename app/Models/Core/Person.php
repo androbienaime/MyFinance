@@ -2,11 +2,15 @@
 
 namespace App\Models\Core;
 
+use App\Contracts\Deletable;
+use App\Models\Concerns\HasDeletionGuard;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class Person extends Model
+class Person extends Model implements Deletable
 {
+    use HasDeletionGuard;
+    
     protected $fillable = [
         'last_name',
         'first_name',
@@ -53,5 +57,16 @@ class Person extends Model
     public function accountPeople(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(AccountPerson::class);
+    }
+
+
+    public function canBeDeleted(): bool
+    {
+        return ! $this->customer()->exists();
+    }
+
+    public function getDeletionGuardMessage(): string
+    {
+        return "Cette personne est liée à un client actif et ne peut pas être supprimée.";
     }
 }

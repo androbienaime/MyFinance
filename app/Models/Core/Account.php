@@ -2,6 +2,8 @@
 
 namespace App\Models\Core;
 
+use App\Contracts\Deletable;
+use App\Models\Concerns\HasDeletionGuard;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,9 +11,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Account extends Model
+class Account extends Model implements Deletable
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasDeletionGuard;
 
     protected $fillable = [
         'code',
@@ -80,5 +82,18 @@ class Account extends Model
         }
 
         throw new \RuntimeException('Impossible de generer un code de compte unique apres plusieurs tentatives.');
+    }
+
+
+    public function canBeDeleted(): bool
+    {
+        return ! $this->transactions()->exists();
+    }
+
+    public function getDeletionGuardMessage(): string
+    {
+        $count = $this->transactions()->count();
+
+        return "Ce compte possède {$count} transaction(s) et ne peut pas être supprimé.";
     }
 }

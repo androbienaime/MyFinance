@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Core\Accounts\Tables;
 
+use App\Filament\Actions\GuardedDeleteAction;
+use App\Filament\Actions\GuardedDeleteBulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -51,11 +53,12 @@ class AccountsTable
             ])
             ->recordActions([
                 EditAction::make(),
+                GuardedDeleteAction::make()
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
+                    GuardedDeleteBulkAction::make(),
+                    // ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),
                 ]),
             ]);

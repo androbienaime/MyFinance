@@ -2,6 +2,8 @@
 
 namespace App\Models\Core;
 
+use App\Contracts\Deletable;
+use App\Models\Concerns\HasDeletionGuard;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,9 +11,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Employee extends Model
+class Employee extends Model implements Deletable
 {
-     use HasFactory, SoftDeletes;
+     use HasFactory, SoftDeletes, HasDeletionGuard;
 
     protected $fillable = [
         'firstname',
@@ -56,5 +58,15 @@ class Employee extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public function canBeDeleted(): bool
+    {
+        return true;
+    }
+
+    public function getDeletionGuardMessage(): string
+    {
+        return "Ce Emplyee ne peut pas être supprimé.";
     }
 }

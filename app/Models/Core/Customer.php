@@ -2,6 +2,8 @@
 
 namespace App\Models\Core;
 
+use App\Contracts\Deletable;
+use App\Models\Concerns\HasDeletionGuard;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,9 +11,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Customer extends Model
+class Customer extends Model implements Deletable
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasDeletionGuard;
 
     protected $fillable = [
         'code',
@@ -63,5 +65,18 @@ class Customer extends Model
             ->orderByRaw('CASE WHEN customers.employee_id = ? THEN 0 ELSE 1 END', [$currentEmployeeId])
             ->orderByRaw('CASE WHEN employees.branch_id = ? THEN 0 ELSE 1 END', [$currentBranchId])
             ->orderByDesc('customers.created_at');
+    }
+
+
+    public function canBeDeleted(): bool
+    {
+        return ! $this->accounts()->exists();
+    }
+
+    public function getDeletionGuardMessage(): string
+    {
+        $count = $this->accounts()->count();
+
+        return "Ce client possède encore {$count} compte(s) et ne peut pas être supprimé.";
     }
 }

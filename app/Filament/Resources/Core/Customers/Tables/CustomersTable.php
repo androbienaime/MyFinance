@@ -2,7 +2,10 @@
 
 namespace App\Filament\Resources\Core\Customers\Tables;
 
+use App\Filament\Actions\GuardedDeleteAction;
+use App\Filament\Actions\GuardedDeleteBulkAction;
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
@@ -60,11 +63,12 @@ class CustomersTable
             ])
             ->recordActions([
                 EditAction::make(),
+                GuardedDeleteAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
+                    GuardedDeleteBulkAction::make(),
+                    // ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),
                 ]),
             ]);
