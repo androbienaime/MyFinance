@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Core\Employee;
+use App\Observers\EmployeeObserver;
 use App\Policies\RolePolicy;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
@@ -36,5 +38,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(\App\Models\Core\Branch::class, \App\Policies\BranchPolicy::class);
         Gate::policy(\App\Models\Core\ApprovalThreshold::class, \App\Policies\ApprovalThresholdPolicy::class);
         Gate::policy(\App\Models\Core\TypeOfAccount::class, \App\Policies\TypeOfAccountResourcePolicy::class);
+    
+        
+        Employee::observe(EmployeeObserver::class);
+
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Core\Employees\Schemas;
 
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -28,41 +29,87 @@ class EmployeeForm
                     TextInput::make('lastname')->label('Nom')->required(),
                 Grid::make(3)
                     ->schema([
-                        Select::make('identity_type')
-                            ->label('Type de pièce')
-                            ->options([
-                                'NIF' => 'NIF',
-                                'NINU' => 'NINU',
-                                'PASSPORT' => 'Passeport',
-                            ])
-                            ->required()
-                            ->live()
-                            ->afterStateUpdated(fn (Set $set) => $set('identity_number', null))
-                            ->columnSpan(1)
-                            ->default(1),
+                            Repeater::make('identityDocuments')
+                                ->relationship('identityDocuments')
+                                ->schema([
+                                    Grid::make()
+                                        ->columns(1)
+                                        ->schema([
+                                            Grid::make()
+                                                ->columns(5)
+                                                ->schema([
+                                                    Select::make('document_type')
+                                                        ->label(__('Document type'))
+                                                        ->options([
+                                                            'NIF' => 'NIF',
+                                                            'NINU' => 'NINU',
+                                                            'PASSPORT' => 'PASSPORT',
+                                                            'DRIVING_LICENSE' => 'PERMIS DE CONDUIRE',
+                                                        ])
+                                                        ->default(fn () => 'NINU')
+                                                        ->preload()
+                                                        ->searchable()
+                                                        ->live()
+                                                        ->columnSpan(2)
+                                                        ->afterStateUpdated(fn (callable $set) => $set('state_id', null)),
+                                                
+                                                    TextInput::make('document_number')
+                                                        ->label(__('Document number'))
+                                                        ->required()
+                                                        ->columnSpan(3)
+                                                        ->live(onBlur:true)
+                                                        ->placeholder(fn (Get $get) => match ($get('document_type')) {
+                                                            'NIF' => '008-739-938-5',
+                                                            'NINU' => '0087399385',
+                                                            'PASSPORT' => 'PA123456',
+                                                            default => null,
+                                                        })
+                                                        ->mask(fn (Get $get) => match ($get('document_type')) {
+                                                            'NIF' => RawJs::make("'999-999-999-9'"),
+                                                            'NINU' => RawJs::make("'9999999999'"),
+                                                            default => null,
+                                                        })
+                                                        ->rules(fn (Get $get) => match ($get('document_type')) {
+                                                            'NIF' => ['regex:/^\d{3}-\d{3}-\d{3}-\d{1}$/'],
+                                                            'NINU' => ['digits:10'],
+                                                            'PASSPORT' => ['alpha_num', 'min:5', 'max:12'],
+                                                            default => [],
+                                                        }),
+                                                    // Toggle::make('is_primary')
+                                                    //     ->label(__('Is primary'))
+                                                    //     ->default(fn () => true)
+                                                    //     ->required()
+                                                    //     ->columnSpan(1),
+                                            ])->columnSpanFull(),
+                                        ]),
+                                ])
+                                ->columnSpanFull()
+                                ->columns(1)
+                                ->collapsible()
+                                ->itemLabel(fn (array $state): ?string => $state['document_type'] . ':'.$state['document_number'] ?? null),
 
-                        TextInput::make('identity_number')
-                            ->label('Numéro de pièce d\'identité')
-                            ->required()
-                            ->live(onBlur: true)
-                            ->placeholder(fn (Get $get) => match ($get('identity_type')) {
-                                'NIF' => '008-739-938-5',
-                                'NINU' => '0087399385',
-                                'PASSPORT' => 'PA123456',
-                                default => null,
-                            })
-                            ->mask(fn (Get $get) => match ($get('identity_type')) {
-                                'NIF' => RawJs::make("'999-999-999-9'"),
-                                'NINU' => RawJs::make("'9999999999'"),
-                                default => null,
-                            })
-                            ->rules(fn (Get $get) => match ($get('identity_type')) {
-                                'NIF' => ['regex:/^\d{3}-\d{3}-\d{3}-\d{1}$/'],
-                                'NINU' => ['digits:10'],
-                                'PASSPORT' => ['alpha_num', 'min:5', 'max:12'],
-                                default => [],
-                            })
-                            ->columnSpan(2),
+                        // TextInput::make('identity_number')
+                        //     ->label('Numéro de pièce d\'identité')
+                        //     ->required()
+                        //     ->live(onBlur: true)
+                            // ->placeholder(fn (Get $get) => match ($get('identity_type')) {
+                            //     'NIF' => '008-739-938-5',
+                            //     'NINU' => '0087399385',
+                            //     'PASSPORT' => 'PA123456',
+                            //     default => null,
+                            // })
+                            // ->mask(fn (Get $get) => match ($get('identity_type')) {
+                            //     'NIF' => RawJs::make("'999-999-999-9'"),
+                            //     'NINU' => RawJs::make("'9999999999'"),
+                            //     default => null,
+                            // })
+                            // ->rules(fn (Get $get) => match ($get('identity_type')) {
+                            //     'NIF' => ['regex:/^\d{3}-\d{3}-\d{3}-\d{1}$/'],
+                            //     'NINU' => ['digits:10'],
+                            //     'PASSPORT' => ['alpha_num', 'min:5', 'max:12'],
+                            //     default => [],
+                            // })
+                        //     ->columnSpan(2),
                     ]),
 
                     Select::make('branch_id')
@@ -70,6 +117,7 @@ class EmployeeForm
                         ->relationship('branch', 'name')
                         ->default(fn () => Auth::user()->currentBranchId())
                         ->disabled(fn () => ! Auth::user()->isHeadOffice())
+                        ->visible(fn (string $operation) => $operation !== 'edit')
                         ->dehydrated()
                         ->required(),
                 ]),

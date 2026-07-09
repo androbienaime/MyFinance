@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Core\Employees\Tables;
 
+use App\Filament\Resources\EmployeeResource\Actions\TransferAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -18,11 +19,7 @@ class EmployeesTable
     {
         return $table
             ->columns([
-                TextColumn::make('firstname')
-                    ->searchable(),
-                TextColumn::make('lastname')
-                    ->searchable(),
-                TextColumn::make('user.name')
+                TextColumn::make('full_name')
                     ->searchable(),
                 TextColumn::make('gender')
                     ->searchable(),
@@ -55,6 +52,7 @@ class EmployeesTable
             ])
             ->recordActions([
                 EditAction::make(),
+                TransferAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

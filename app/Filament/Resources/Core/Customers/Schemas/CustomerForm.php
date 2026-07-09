@@ -13,7 +13,9 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Filament\Support\RawJs;
 use Illuminate\Support\Facades\Auth;
 
 class CustomerForm
@@ -79,6 +81,24 @@ class CustomerForm
                                                     TextInput::make('document_number')
                                                         ->label(__('Document number'))
                                                         ->required()
+                                                              ->live(onBlur:true)
+                                                        ->placeholder(fn (Get $get) => match ($get('document_type')) {
+                                                            'NIF' => '008-739-938-5',
+                                                            'NINU' => '0087399385',
+                                                            'PASSPORT' => 'PA123456',
+                                                            default => null,
+                                                        })
+                                                        ->mask(fn (Get $get) => match ($get('document_type')) {
+                                                            'NIF' => RawJs::make("'999-999-999-9'"),
+                                                            'NINU' => RawJs::make("'9999999999'"),
+                                                            default => null,
+                                                        })
+                                                        ->rules(fn (Get $get) => match ($get('document_type')) {
+                                                            'NIF' => ['regex:/^\d{3}-\d{3}-\d{3}-\d{1}$/'],
+                                                            'NINU' => ['digits:10'],
+                                                            'PASSPORT' => ['alpha_num', 'min:5', 'max:12'],
+                                                            default => [],
+                                                        })
                                                         ->columnSpan(3),
                                                     // Toggle::make('is_primary')
                                                     //     ->label(__('Is primary'))
@@ -90,7 +110,7 @@ class CustomerForm
                                 ])
                                 ->columns(1)
                                 ->collapsible()
-                                ->itemLabel(fn (array $state): ?string => $state['address1'] ?? null),
+                                ->itemLabel(fn (array $state): ?string => $state['document_type'] . ':'.$state['document_number'] ?? null),
                             ]),
                         
                             Repeater::make('addresses')
