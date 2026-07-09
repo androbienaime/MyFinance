@@ -145,18 +145,30 @@ class DepositPage extends Page implements HasSchemas, HasTable
                         ->label('Montant')
                         ->numeric()
                         ->minValue(1)
-                        ->required()
+                        ->required(fn (Get $get) => ! $get('active_case_payments'))
                         ->prefix('HTG')
                         ->columnSpanFull()
+                        ->extraInputAttributes([
+                            // Affichage pur JS, jamais notifie a $wire - voir
+                            // pourquoi dans le commentaire plus bas. Un 2e
+                            // listener remet le champ a vide apres un
+                            // enregistrement reussi (evenement dispatche par
+                            // submitTransaction() uniquement en cas de succes
+                            // reel, jamais sur un echec/rejet).
+                            'x-on:case-total-updated.window' => '$el.value = $event.detail.total',
+                            'x-on:deposit-saved.window' => '$el.value = \'\'',
+                        ])
                         // Impossible de saisir un montant sur un compte
                         // desactive. Pour un compte a cases, le champ reste
                         // actif : il sert (1) d'affichage en lecture reactive
                         // du total des cases cochees (mis a jour par Alpine
-                        // via $wire.set depuis case-grid.js), et (2) de champ
-                        // de saisie du montant cible pour le bouton
-                        // "Generer" ci-dessous. Le montant final n'est de
-                        // toute facon JAMAIS pris depuis ce champ pour un
-                        // compte a cases : voir submitTransaction().
+                        // via l'evenement navigateur "case-total-updated",
+                        // sans jamais notifier $wire pour ne pas bloquer la
+                        // saisie manuelle), et (2) de champ de saisie du
+                        // montant cible pour le bouton "Generer" ci-dessous.
+                        // Le montant final n'est de toute facon JAMAIS pris
+                        // depuis ce champ pour un compte a cases : voir
+                        // submitTransaction().
                         ->disabled(fn (Get $get) => $get('account_active') === false)
                         ->suffixAction(
                             ActionsAction::make('generateCases')
@@ -216,17 +228,10 @@ class DepositPage extends Page implements HasSchemas, HasTable
             return;
         }
 
-        // $usesCases = (bool) ($state['active_case_payments'] ?? false);
-        // $tags = ! empty($state['tags']) ? array_map('intval', $state['tags']) : null;
-
         // Point de securite : pour un compte a cases, le montant n'est
         // JAMAIS pris depuis $state['amount'] (calcul cote client, donc
-        // manipulable) - il est toujours recalcule ici a partir du prix
-        // reel de la case et du nombre de cases cochees.
-        // $amount = $usesCases
-        //     ? (float) ($tags ? array_sum($tags) * ($this->getCasePrice($state['account_code']) ?? 0) : 0)
-        //     : (float) ($state['amount'] ?? 0);
-
+        // manipulable) - il est toujours recalcule dans DepositAction, a
+        // partir du prix reel de la case et du nombre de cases cochees.
         try {
             $transaction = app(DepositAction::class)->handle(
                 $state['account_code'],
@@ -238,7 +243,28 @@ class DepositPage extends Page implements HasSchemas, HasTable
             Notification::make()->title("Depot {$transaction->code} enregistre.")->success()->send();
 
             $this->form->fill();
+
+            // active_case_payments / account_active / case_price /
+            // case_duration / paid_tags ne sont PAS des champs declares du
+            // formulaire (juste des cles ecrites via $set() dans le
+            // afterStateUpdated de account_code) - form->fill() ne les
+            // remet pas a zero, contrairement aux vrais champs
+            // (account_code, full_name, balance, amount, tags). Sans ce
+            // reset manuel, visible() de la grille continuait de lire les
+            // anciennes valeurs et la grille restait affichee.
+            $this->data['active_case_payments'] = false;
+            $this->data['account_active'] = null;
+            $this->data['case_price'] = 0;
+            $this->data['case_duration'] = 0;
+            $this->data['paid_tags'] = [];
+
             $this->resetTable();
+
+            // Uniquement en cas de succes reel : on demande a la grille et
+            // au champ Montant de se reinitialiser visuellement tout de
+            // suite (au lieu d'attendre le prochain re-render Livewire, qui
+            // ne toucherait meme pas .value puisqu'on l'ecrit en JS pur).
+            $this->dispatch('deposit-saved');
         } catch (TransactionRejectedException $e) {
             Notification::make()->title($e->getMessage())->danger()->send();
         }

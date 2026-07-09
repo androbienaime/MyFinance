@@ -19,6 +19,8 @@
         paid: @js($paidTags),
     })"
     x-on:generate-cases.window="generate($event.detail.amount)"
+    x-on:deposit-saved.window="reset()"
+    x-effect="window.dispatchEvent(new CustomEvent('case-total-updated', { detail: { total } }))"
 >
     {{-- Champ "Nombres" : juste sous le Montant. Cliquer une case l'ajoute
          ici, taper ici selectionne la case correspondante (meme tableau
@@ -40,7 +42,7 @@
             <div class="tags-input flex flex-wrap gap-1.5">
                 <template x-for="(n, index) in selected" :key="n">
                     <span
-                        class="inline-flex items-center gap-1 rounded-md px-2.5 bg-blue-500 py-1 text-xs font-medium text-white shadow-sm"
+                        class="inline-flex items-center gap-1 rounded-md bg-blue-500 px-2.5 py-1 text-xs font-medium text-white shadow-sm"
                         :class="tagColor(index)"
                     >
                         <span x-text="n"></span>
