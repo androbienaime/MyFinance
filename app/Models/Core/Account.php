@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Account extends Model implements Deletable
 {
@@ -95,5 +96,38 @@ class Account extends Model implements Deletable
         $count = $this->transactions()->count();
 
         return "Ce compte possède {$count} transaction(s) et ne peut pas être supprimé.";
+    }
+
+
+    public function closures(): HasMany
+    {
+        return $this->hasMany(AccountClosure::class);
+    }
+
+    /**
+     * Ferme manuellement le compte. La raison est optionnelle.
+     * Point d'entrée unique pour toute fermeture manuelle.
+     */
+    public function closeAccount(?string $reason = null, ?int $performedBy = null): AccountClosure
+    {
+        if (! $this->is_active) {
+            throw new \RuntimeException("Ce compte est déjà fermé.");
+        }
+
+        return DB::transaction(function () use ($reason, $performedBy) {
+            $closure = $this->closures()->create([
+                'type' => 'manual',
+                'reason' => $reason,
+                'balance_at_closure' => $this->balance ?? 0,
+                'closed_by' => $performedBy,
+            ]);
+
+            $this->update([
+                'is_active' => false,
+                'closed_at' => now(),
+            ]);
+
+            return $closure;
+        });
     }
 }

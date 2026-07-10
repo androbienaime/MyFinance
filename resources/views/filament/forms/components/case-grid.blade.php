@@ -3,13 +3,10 @@
     $price = (float) ($get('case_price') ?? 0);
     $paidTags = $get('paid_tags') ?? [];
     $statePath = $field->getStatePath();
+    $readonly = $readonly ?? false; // default: false pour DepositPage qui ne passe pas ce viewData
 @endphp
 
 <div
-    {{-- Attribut stable, non templated par une valeur qui peut changer
-         (contrairement au wire:key) : c'est ce que le bouton "Enregistrer"
-         utilise pour retrouver ce composant et lire 'selected' au moment
-         de la soumission, via Alpine.$data(). --}}
     data-case-grid-root
     data-state-path="{{ $statePath }}"
     wire:key="case-grid-{{ $get('account_code') }}-{{ $duration }}"
@@ -17,15 +14,13 @@
         duration: {{ $duration }},
         price: {{ $price }},
         paid: @js($paidTags),
+        readonly: @js($readonly),
     })"
     x-on:generate-cases.window="generate($event.detail.amount)"
     x-on:deposit-saved.window="reset()"
     x-effect="window.dispatchEvent(new CustomEvent('case-total-updated', { detail: { total } }))"
 >
-    {{-- Champ "Nombres" : juste sous le Montant. Cliquer une case l'ajoute
-         ici, taper ici selectionne la case correspondante (meme tableau
-         "selected" des deux cotes, donc synchro automatique en local,
-         sans aucune requete reseau). --}}
+    @unless($readonly)
     <div class="mb-4">
         <div class="flex items-center justify-between">
             <label class="text-xs font-bold uppercase text-gray-600">Nombres</label>
@@ -46,17 +41,11 @@
                         :class="tagColor(index)"
                     >
                         <span x-text="n"></span>
-
-                        <button
-                            type="button"
-                            @click="toggle(n)"
-                            class="ml-0.5 text-white/90 hover:text-white focus:outline-none"
-                        >
+                        <button type="button" @click="toggle(n)" class="ml-0.5 text-white/90 hover:text-white focus:outline-none">
                             &times;
                         </button>
                     </span>
                 </template>
-
                 <input
                     class="tags-input-text"
                     placeholder="Ajouter des Casiers"
@@ -70,8 +59,8 @@
             Total : <span x-text="total"></span> HTG
         </div>
     </div>
+    @endunless
 
-    {{-- Grille du livret : une table par echelon (mois), 30 cases chacune --}}
     <div class="grid gap-4 md:grid-cols-2">
         <template x-for="month in months" :key="month">
             <div class="w-full overflow-x-auto">
@@ -81,12 +70,13 @@
                             <tr>
                                 <template x-for="n in casesInMonth(month).slice(rowIndex * 5, rowIndex * 5 + 5)" :key="n">
                                     <td
-                                        @click="toggle(n)"
+                                        @click="!readonly && toggle(n)"
                                         class="border border-gray-400 px-3 py-2 text-center select-none"
                                         :class="{
                                             'bg-blue-600 text-white cursor-not-allowed': paid.includes(n),
-                                            'bg-yellow-500 text-white cursor-pointer': !paid.includes(n) && selected.includes(n),
-                                            'cursor-pointer hover:bg-yellow-500 hover:text-white': !paid.includes(n) && !selected.includes(n),
+                                            'bg-yellow-500 text-white cursor-pointer': !readonly && !paid.includes(n) && selected.includes(n),
+                                            'cursor-pointer hover:bg-yellow-500 hover:text-white': !readonly && !paid.includes(n) && !selected.includes(n),
+                                            'cursor-default': readonly && !paid.includes(n),
                                         }"
                                     >
                                         <span x-text="n"></span>

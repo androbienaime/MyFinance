@@ -11,7 +11,7 @@ use App\Models\Core\Employee;
 use App\Models\Core\Transaction;
 use Illuminate\Support\Facades\DB;
 
-class PaymentAction
+class AccountSettlementAction
 {
     public function handle(string $accountCode, float $amount, Employee $employee): Transaction
     {
@@ -22,24 +22,35 @@ class PaymentAction
                 throw new TransactionRejectedException('Ce compte a ete desactive.');
             }
 
-            if ($amount <= 0 || $amount > $account->balance) {
-                throw new TransactionRejectedException('Montant invalide pour ce paiement.');
-            }
+            // if ($amount <= 0 || $amount > $account->balance) {
+            //     throw new TransactionRejectedException('Montant invalide pour ce paiement.');
+            // }
 
-            $requiredLevels = ApprovalThreshold::levelsRequiredFor(TransactionType::Payment, $amount);
+            $requiredLevels = ApprovalThreshold::levelsRequiredFor(TransactionType::AccountSettlement , $amount);
             $status = $requiredLevels > 0 ? TransactionStatus::Pending : TransactionStatus::Completed;
 
             $transaction = Transaction::create([
                 'account_id' => $account->id,
                 'code' => Transaction::generateUniqueCode(),
-                'amount' => $amount,
+                'amount' => $account->balance,
                 'employee_id' => $employee->id,
-                'type' => TransactionType::Payment,
+                'type' => TransactionType::AccountSettlement,
                 'status' => $status,
             ]);
 
             if ($status === TransactionStatus::Completed) {
-                $account->decrement('balance', $amount);
+                $balanceBeforeSettlement = $account->balance ?? 0;
+
+                $closure = $account->closures()->create([
+                    'type' => 'settlement',
+                    'reason' => 'Account Settlement',
+                    'balance_at_closure' => $balanceBeforeSettlement,
+                    'closed_by' => $employee->id,
+                ]);
+
+                $account->balance = 0;
+                $account->is_active = false;
+                $account->save();
             }
 
             return $transaction;

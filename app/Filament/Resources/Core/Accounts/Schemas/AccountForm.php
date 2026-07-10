@@ -91,7 +91,10 @@ class AccountForm
                 ->description('Choisis une personne existante ou cree-la a la volee.')
                 ->schema([
                     Repeater::make('accountPeople')
-                        ->relationship()
+                        ->relationship(
+                            'accountPeople',
+                            modifyQueryUsing: fn (Builder $query) => $query->where('role', '!=', 'owner')
+                        )
                         ->label('')
                         ->schema([
                             Grid::make(2)->schema([

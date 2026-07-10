@@ -1,13 +1,13 @@
-window.caseGrid = function ({ duration, price, paid }) {
+window.caseGrid = function ({ duration, price, paid, readonly = false }) {
     return {
         duration,
         price,
         paid,
+        readonly,
         selected: [],
         targetAmount: null,
         manualInput: '',
 
-        // Palette cyclique pour styliser les tags (type Spatie tags).
         tagPalette: [
             'bg-indigo-500',
             'bg-emerald-500',
@@ -18,14 +18,6 @@ window.caseGrid = function ({ duration, price, paid }) {
             'bg-teal-500',
             'bg-orange-500',
         ],
-
-        // Plus de init() qui touche $wire, plus de sync() du tout ici.
-        // 'selected' est 100% local pendant toute l'interaction - rien ne
-        // peut l'ecraser depuis une reponse serveur puisqu'il n'y a plus
-        // AUCUNE requete reseau declenchee par un clic sur une case. La
-        // synchro vers Livewire se fait une seule fois, juste avant l'envoi
-        // du formulaire (voir deposit-page.blade.php : le bouton
-        // "Enregistrer" lit directement selected via Alpine.$data()).
 
         get months() {
             return Array.from({ length: this.duration }, (_, i) => i + 1);
@@ -45,6 +37,10 @@ window.caseGrid = function ({ duration, price, paid }) {
         },
 
         toggle(n) {
+            // Verrou principal : meme si @click reste branche par erreur
+            // sur une case, ou si toggle() est appele depuis la console,
+            // aucune mutation de 'selected' n'est possible en lecture seule.
+            if (this.readonly) return;
             if (this.paid.includes(n)) return;
 
             if (this.selected.includes(n)) {
@@ -55,10 +51,13 @@ window.caseGrid = function ({ duration, price, paid }) {
         },
 
         reset() {
+            if (this.readonly) return;
             this.selected = [];
         },
 
         addManual() {
+            if (this.readonly) return;
+
             const value = this.manualInput.trim();
             if (!value) return;
 
@@ -76,6 +75,7 @@ window.caseGrid = function ({ duration, price, paid }) {
         },
 
         addCase(n) {
+            if (this.readonly) return;
             const max = this.duration * 30;
             if (n < 1 || n > max) return;
             if (this.paid.includes(n)) return;
@@ -84,6 +84,7 @@ window.caseGrid = function ({ duration, price, paid }) {
         },
 
         generate(externalTarget = null) {
+            if (this.readonly) return;
             const target = parseInt(externalTarget ?? this.targetAmount, 10);
             if (!target || target <= 0) return;
 
