@@ -243,7 +243,7 @@ class DepositPage extends Page implements HasSchemas, HasTable
                 $state['account_code'],
                 (float) ($state['amount'] ?? 0), // ignore par l'Action si le compte utilise les cases
                 $employee,
-                ($state['tags'])
+                ($state['tags'] ?? [])
             );
 
             Notification::make()->title("Depot {$transaction->code} enregistre.")->success()->send();
