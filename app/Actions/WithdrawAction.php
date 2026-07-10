@@ -17,13 +17,17 @@ class WithdrawAction
     {
         return DB::transaction(function () use ($accountCode, $amount, $employee) {
             $account = Account::where('code', $accountCode)->lockForUpdate()->firstOrFail();
-
+            
             if (! $account->is_active) {
                 throw new TransactionRejectedException('Ce compte a ete desactive.');
             }
 
             if ($amount <= 0) {
                 throw new TransactionRejectedException('Le montant doit etre superieur a 0.');
+            }
+
+            if($account->typeOfAccount->active_case_payments === true){
+                throw new TransactionRejectedException('Vous ne pouvez pas faire de retrait sur ce type compte.');
             }
 
             $pendingWithdrawals = Transaction::query()

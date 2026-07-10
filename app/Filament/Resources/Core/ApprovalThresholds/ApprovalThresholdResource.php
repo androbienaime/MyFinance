@@ -13,12 +13,15 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class ApprovalThresholdResource extends Resource
 {
     protected static ?string $model = ApprovalThreshold::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::ShieldExclamation;
+    protected static string|UnitEnum|null $navigationGroup = 'Administration';
+
 
     public static function form(Schema $schema): Schema
     {
@@ -41,8 +44,8 @@ class ApprovalThresholdResource extends Resource
     {
         return [
             'index' => ListApprovalThresholds::route('/'),
-            'create' => CreateApprovalThreshold::route('/create'),
-            'edit' => EditApprovalThreshold::route('/{record}/edit'),
+            // 'create' => CreateApprovalThreshold::route('/create'),
+            // 'edit' => EditApprovalThreshold::route('/{record}/edit'),
         ];
     }
 }

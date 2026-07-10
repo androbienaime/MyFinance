@@ -87,29 +87,6 @@ class EmployeeForm
                                 ->columns(1)
                                 ->collapsible()
                                 ->itemLabel(fn (array $state): ?string => $state['document_type'] . ':'.$state['document_number'] ?? null),
-
-                        // TextInput::make('identity_number')
-                        //     ->label('Numéro de pièce d\'identité')
-                        //     ->required()
-                        //     ->live(onBlur: true)
-                            // ->placeholder(fn (Get $get) => match ($get('identity_type')) {
-                            //     'NIF' => '008-739-938-5',
-                            //     'NINU' => '0087399385',
-                            //     'PASSPORT' => 'PA123456',
-                            //     default => null,
-                            // })
-                            // ->mask(fn (Get $get) => match ($get('identity_type')) {
-                            //     'NIF' => RawJs::make("'999-999-999-9'"),
-                            //     'NINU' => RawJs::make("'9999999999'"),
-                            //     default => null,
-                            // })
-                            // ->rules(fn (Get $get) => match ($get('identity_type')) {
-                            //     'NIF' => ['regex:/^\d{3}-\d{3}-\d{3}-\d{1}$/'],
-                            //     'NINU' => ['digits:10'],
-                            //     'PASSPORT' => ['alpha_num', 'min:5', 'max:12'],
-                            //     default => [],
-                            // })
-                        //     ->columnSpan(2),
                     ]),
 
                     Select::make('branch_id')

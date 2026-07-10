@@ -73,6 +73,9 @@ class DepositPage extends Page implements HasSchemas, HasTable
                             $set('full_name', '');
                             $set('balance', '');
 
+                            // Toujours reset l'erreur avant toute nouvelle recherche
+                            $this->resetErrorBag('data.full_name');
+
                             if (blank($state)) {
                                 return;
                             }
@@ -87,6 +90,9 @@ class DepositPage extends Page implements HasSchemas, HasTable
                                         ->title('Aucun compte ne correspond a ce code.')
                                         ->warning()
                                         ->send();
+
+                                    $this->addError('data.full_name', 'Compte Introuvable.');
+
                                 }
                                 return;
                             }
@@ -101,6 +107,9 @@ class DepositPage extends Page implements HasSchemas, HasTable
                                     ->body('Aucun depot ne peut etre enregistre tant que le compte n\'est pas reactive.')
                                     ->danger()
                                     ->send();
+
+                                $this->addError('data.full_name', 'Compte desactive.');
+
                                 return;
                             }
 
@@ -126,10 +135,7 @@ class DepositPage extends Page implements HasSchemas, HasTable
                         ->formatStateUsing(fn (Get $get) => $get('full_name') ?: '—')
                         ->hint(fn (Get $get) => $get('account_active') === false ? 'Inactif' : null)
                         ->hintColor('danger')
-                        ->hintIcon(fn (Get $get) => $get('account_active') === false ? Heroicon::ExclamationTriangle : null)
-                        ->helperText(fn (Get $get) => $get('account_active') === false
-                            ? 'Compte desactive'
-                            : null),
+                        ->hintIcon(fn (Get $get) => $get('account_active') === false ? Heroicon::ExclamationTriangle : null),
  
                     TextInput::make('balance')
                         ->label('Balance Actuelle')
