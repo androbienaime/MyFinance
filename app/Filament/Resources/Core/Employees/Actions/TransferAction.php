@@ -1,7 +1,5 @@
 <?php
-// app/Filament/Resources/EmployeeResource/Actions/TransferAction.php
-
-namespace App\Filament\Resources\EmployeeResource\Actions;
+namespace App\Filament\Resources\Core\Employees\Actions;
 
 use App\Models\Core\Branch;
 use Filament\Actions\Action;

@@ -20,6 +20,7 @@ Filament, et creation du premier utilisateur.
 
 ```bash
 composer install
+npm update
 php artisan myfinance:install
 ```
 
@@ -36,6 +37,10 @@ php artisan myfinance:install --skip-user
 A la fin de l'installation, connectez-vous sur `/adminFinance` avec l'utilisateur
 cree pendant le prompt. La 2FA (application TOTP) sera exigee des la premiere
 connexion.
+
+```bash
+composer run dev
+```
 
 ### Ajouter un utilisateur/employe ensuite
 

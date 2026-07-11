@@ -21,7 +21,7 @@ class InstallCommand extends Command
     public function handle(): int
     {
         $this->components->info('Installation de MyFinance');
-
+        $this->call("optimize");
         $this->ensureEnvFile();
         $this->ensureAppKey();
         $this->runMigrations();
