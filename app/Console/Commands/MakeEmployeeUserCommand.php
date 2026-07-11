@@ -10,6 +10,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
+use Spatie\Permission\Models\Permission;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\password;
@@ -77,32 +78,6 @@ class MakeEmployeeUserCommand extends Command
         $this->warn('L\'utilisateur devra changer son mot de passe et configurer la 2FA a sa premiere connexion.');
 
         return self::SUCCESS;
-    }
-
-    private function resolveBranch(): Branch
-    {
-        if ($code = $this->option('branch')) {
-            return Branch::where('code', $code)->firstOrFail();
-        }
-
-        $branches = Branch::query()->orderBy('name')->get();
-
-        if ($branches->isEmpty()) {
-            $this->warn('Aucune succursale n\'existe encore. Creons-en une.');
-
-            return Branch::create([
-                'code' => text('Code de la succursale', default: 'SIEGE-01', required: true),
-                'name' => text('Nom de la succursale', default: 'Siege central', required: true),
-                'is_active' => true,
-            ]);
-        }
-
-        $choice = select(
-            label: 'Succursale de rattachement',
-            options: $branches->pluck('name', 'code')->all(),
-        );
-
-        return $branches->firstWhere('code', $choice);
     }
 
     private function resolveBranch(): Branch
