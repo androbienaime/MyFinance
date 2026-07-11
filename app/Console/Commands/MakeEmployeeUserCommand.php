@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Core\Role;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 
 use function Laravel\Prompts\confirm;
@@ -30,8 +31,13 @@ class MakeEmployeeUserCommand extends Command
     {
         $name = $this->option('name') ?: text('Nom complet', required: true);
         $email = $this->option('email') ?: text('Email de connexion', required: true, validate: fn ($v) => User::where('email', $v)->exists() ? 'Cet email est deja utilise.' : null);
-        $plainPassword = $this->option('password') ?: password('Mot de passe', required: true, validate: fn ($v) => Password::default()->validate($v) ? null : 'Mot de passe trop faible.');
-
+        $plainPassword = $this->option('password') ?: password(
+            'Mot de passe',
+            required: true,
+            validate: fn ($v) => Validator::make(['password' => $v], ['password' => Password::default()])->fails()
+                ? 'Mot de passe trop faible (8 caracteres minimum recommandes, mix lettres/chiffres).'
+                : null,
+        );
         $branch = $this->resolveBranch();
         $role = $this->resolveRole();
 
