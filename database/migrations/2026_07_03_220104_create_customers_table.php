@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('firstname');
             $table->string('gender')->nullable();
-            $table->string('identity_number')->nullable()->unique();
+            $table->string('identity_number')->unique();
             $table->foreignId('employee_id')->constrained();
             $table->foreignId('address_id')->nullable()->constrained();
             $table->softDeletes();

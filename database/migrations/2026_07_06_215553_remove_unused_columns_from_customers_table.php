@@ -8,6 +8,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('customers', function (Blueprint $table) {
+            $table->dropUnique('customers_identity_number_unique'); // drop index first
+        });
+        
+        Schema::table('customers', function (Blueprint $table) {
             $table->dropForeign(['address_id']); // si address_id est une clé étrangère
 
             $table->dropColumn([
