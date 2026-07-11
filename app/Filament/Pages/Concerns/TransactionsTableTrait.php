@@ -3,12 +3,15 @@
 namespace App\Filament\Pages\Concerns;
 
 use App\Actions\ApproveTransactionAction;
+use App\Actions\DeleteTransactionAction;
 use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
 use App\Exceptions\TransactionRejectedException;
 use App\Models\Core\Transaction;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -98,8 +101,49 @@ trait TransactionsTableTrait
                             $record, Auth::user(), $data['comment']
                         ), 'Transaction rejetee.');
                     }),
+
+                Action::make('delete')
+                ->label('Supprimer')
+                ->icon('heroicon-o-trash')
+                ->color('danger')
+                ->authorize(fn ($record) => Auth::user()->can('delete', $record))
+                ->requiresConfirmation()
+                ->modalDescription('Cette action annule le mouvement de solde si la transaction etait completee, et libere les cases associees si applicable. Cette action est tracee et irreversible.')
+                ->schema([
+                    Textarea::make('reason')
+                        ->label('Motif de la suppression')
+                        ->required(),
+                ])
+                ->action(function ($record, array $data) {
+                    try {
+                        app(DeleteTransactionAction::class)->handle($record, Auth::user()->employee, $data['reason']);
+                        Notification::make()->title('Transaction supprimee et solde ajuste.')->success()->send();
+                    } catch (TransactionRejectedException $e) {
+                        Notification::make()->title($e->getMessage())->danger()->send();
+                    }
+                }),
+
+            // Historique des approbations - repond a "qui l'a approuve"
+            Action::make('viewApprovals')
+                ->label('Historique')
+                ->icon('heroicon-o-clock')
+                ->color('gray')
+                ->modalHeading('Historique des decisions')
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Fermer')
+                ->schema(fn ($record) => $record->approvals->map(fn ($approval) =>
+                    Placeholder::make("approval_{$approval->id}")
+                        ->label("Niveau {$approval->level} — {$approval->decision}")
+                        ->content(
+                            ($approval->approver?->name ?? 'Utilisateur supprime')
+                            . ' — ' . $approval->created_at->format('d/m/Y H:i')
+                            . ($approval->comment ? " — \"{$approval->comment}\"" : '')
+                        )->disabled()
+                )->all() ?: [
+                    Placeholder::make('none')->label('')->disabled()->content('Aucune approbation enregistree pour cette transaction.'),
+                ]),
             ])
-            ->defaultSort('created_at', 'desc');
+            ->defaultSort('updated_at', 'desc');
     }
 
     private function runApproval(callable $callback, string $successMessage): void

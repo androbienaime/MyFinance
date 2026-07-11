@@ -42,7 +42,7 @@ class AccountSettlementAction
                 $balanceBeforeSettlement = $account->balance ?? 0;
 
                 $closure = $account->closures()->create([
-                    'type' => 'settlement',
+                    'type' => TransactionType::AccountSettlement,
                     'reason' => 'Account Settlement',
                     'balance_at_closure' => $balanceBeforeSettlement,
                     'closed_by' => $employee->id,

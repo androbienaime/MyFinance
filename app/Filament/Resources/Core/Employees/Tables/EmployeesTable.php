@@ -60,6 +60,6 @@ class EmployeesTable
                     ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),
                 ]),
-            ]);
+            ])->defaultSort('updated_at', 'desc');
     }
 }

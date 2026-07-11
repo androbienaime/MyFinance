@@ -3,6 +3,7 @@
 namespace App\Models\Core;
 
 use App\Contracts\Deletable;
+use App\Enums\TransactionType;
 use App\Models\Concerns\HasDeletionGuard;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -116,7 +117,7 @@ class Account extends Model implements Deletable
 
         return DB::transaction(function () use ($reason, $performedBy) {
             $closure = $this->closures()->create([
-                'type' => 'manual',
+                'type' => TransactionType::AccountClosure,
                 'reason' => $reason,
                 'balance_at_closure' => $this->balance ?? 0,
                 'closed_by' => $performedBy,

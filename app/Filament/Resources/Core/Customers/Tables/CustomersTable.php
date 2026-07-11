@@ -71,6 +71,6 @@ class CustomersTable
                     // ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),
                 ]),
-            ]);
+            ])->defaultSort('updated_at', 'desc');
     }
 }

@@ -38,6 +38,6 @@ class RolesTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])->defaultSort('updated_at', 'desc');
     }
 }

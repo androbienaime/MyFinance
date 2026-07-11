@@ -15,6 +15,10 @@ class AccountClosuresTable
         return $table
             ->columns([
                 TextColumn::make('account.customer.person.full_name')
+                    ->label("Full Name")
+                    ->searchable(),
+                TextColumn::make('account.code')
+                    ->label("Code")
                     ->searchable(),
                 TextColumn::make('type')
                     ->searchable(),
@@ -33,18 +37,18 @@ class AccountClosuresTable
                 TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: false),
             ])
             ->filters([
                 //
             ])
             ->recordActions([
-                EditAction::make(),
+                // EditAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ]) ->defaultSort('updated_at', 'desc');
     }
 }

@@ -54,4 +54,13 @@ class TransactionPolicy
 
         return $user->can('transactions.approve');
     }
+
+    public function delete(User $user, Transaction $transaction): bool
+    {
+        // Contrairement aux autres methodes de cette Policy, pas de simple
+        // permission ici : uniquement le siege, sans exception - annuler un
+        // mouvement d'argent deja effectue est l'action la plus sensible
+        // de tout le systeme.
+        return $user->isHeadOffice();
+    }
 }
