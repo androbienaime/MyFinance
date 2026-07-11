@@ -2,8 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\Core\AccountClosure;
 use App\Models\Core\Employee;
+use App\Models\Core\Person;
 use App\Observers\EmployeeObserver;
+use App\Policies\AccountClosure as PoliciesAccountClosure;
+use App\Policies\PersonPolicy;
 use App\Policies\RolePolicy;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
@@ -38,7 +42,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(\App\Models\Core\Branch::class, \App\Policies\BranchPolicy::class);
         Gate::policy(\App\Models\Core\ApprovalThreshold::class, \App\Policies\ApprovalThresholdPolicy::class);
         Gate::policy(\App\Models\Core\TypeOfAccount::class, \App\Policies\TypeOfAccountResourcePolicy::class);
-    
+        Gate::policy(AccountClosure::class, PoliciesAccountClosure::class);
+        Gate::policy(Person::class, PersonPolicy::class);
         
         Employee::observe(EmployeeObserver::class);
 

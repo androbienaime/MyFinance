@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Widgets\Core\GlobalStatsOverview;
+use App\Filament\Widgets\Core\TransactionsChart;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -70,8 +72,8 @@ class AdminFinancePanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-                AccountWidget::class,
-                FilamentInfoWidget::class,
+                GlobalStatsOverview::class,
+                TransactionsChart::class
             ])
             ->middleware([
                 EncryptCookies::class,

@@ -73,4 +73,20 @@ class Transaction extends Model
             ->orderByRaw('CASE WHEN employees.branch_id = ? THEN 0 ELSE 1 END', [$currentBranchId])
             ->orderByDesc('transactions.created_at');
     }
+
+    public function scopeDepositsAndWithdrawalsByDay(Builder $query, string $startDate, string $endDate): Builder
+    {
+        return $query
+            ->whereBetween('transactions.created_at', [$startDate, $endDate])
+            ->selectRaw("DATE(transactions.created_at) as transaction_date,
+                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as deposit_sum,
+                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as withdrawal_sum,
+                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as payment_sum", [
+                TransactionType::Deposit->value,
+                TransactionType::Withdrawal->value,
+                TransactionType::AccountSettlement->value,
+            ])
+            ->groupBy('transaction_date')
+            ->orderByDesc('transaction_date');
+    }
 }
