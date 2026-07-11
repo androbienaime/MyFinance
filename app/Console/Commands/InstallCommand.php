@@ -100,8 +100,14 @@ class InstallCommand extends Command
             return;
         }
 
-        info('Creation du premier utilisateur — attribuez-lui un role donnant "system.full-access" pour un acces complet.');
-
-        $this->call('myfinance:make-user');
+        // Volontairement PAS de $this->call('myfinance:make-user') ici :
+        // les prompts interactifs (text/password/select) ne s'affichent pas
+        // de facon fiable quand une commande en appelle une autre via call(),
+        // l'entree/sortie du terminal n'etant pas correctement transmise a
+        // la sous-commande. On demande donc explicitement a l'utilisateur de
+        // lancer la commande lui-meme, juste apres.
+        $this->newLine();
+        $this->components->warn('Lancez maintenant la commande suivante pour creer votre utilisateur :');
+        $this->line('    php artisan myfinance:make-user');
     }
 }
