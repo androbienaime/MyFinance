@@ -105,16 +105,50 @@ class MakeEmployeeUserCommand extends Command
         return $branches->firstWhere('code', $choice);
     }
 
-    private function resolveRole(): ?Role
+    private function resolveBranch(): Branch
     {
-        if ($name = $this->option('role')) {
-            return Role::where('name', $name)->first();
+        if ($code = $this->option('branch')) {
+            return Branch::where('code', $code)->firstOrFail();
         }
 
+        $branches = Branch::query()->orderBy('name')->get();
+
+        if ($branches->isEmpty()) {
+            $this->warn('Aucune succursale n\'existe encore. Creons-en une.');
+
+            return Branch::create([
+                'code' => text('Code de la succursale', default: 'SIEGE-01', required: true),
+                'name' => text('Nom de la succursale', default: 'Siege central', required: true),
+                'is_active' => true,
+            ]);
+        }
+
+        $choice = select(
+            label: 'Succursale de rattachement',
+            options: $branches->pluck('name', 'code')->all(),
+        );
+
+        return $branches->firstWhere('code', $choice);
+    }
+
+    private function resolveRole(): ?Role
+    {
         $roles = Role::query()->orderBy('name')->get();
 
         if ($roles->isEmpty()) {
-            return null;
+            // Premiere installation : aucun role n'existe encore, donc
+            // aucun moyen de choisir quoi que ce soit via le panel (il faut
+            // deja etre connecte pour en creer un). On cree immediatement
+            // "super_admin" avec absolument TOUTES les permissions
+            // existantes, sans exception - c'est le seul point d'entree
+            // garanti dans le systeme au tout premier lancement.
+            $this->warn('Aucun role n\'existe encore. Creation du role "super_admin" avec toutes les permissions.');
+
+            return $this->createSuperAdminRole();
+        }
+
+        if ($name = $this->option('role')) {
+            return $roles->firstWhere('name', $name) ?? Role::where('name', $name)->first();
         }
 
         if (! confirm('Attribuer un role a cet utilisateur maintenant ?', default: true)) {
@@ -127,6 +161,25 @@ class MakeEmployeeUserCommand extends Command
         );
 
         return $roles->firstWhere('id', $choice);
+    }
+
+    /**
+     * Cree (ou recupere) le role super_admin et lui synchronise TOUTES les
+     * permissions existantes en base, sans filtrage. Contrairement aux
+     * autres roles ou l'on ne coche que le necessaire via l'interface, ce
+     * role est explicitement le "bootstrap" du systeme - il doit tout
+     * pouvoir faire, meme les permissions ajoutees plus tard par un
+     * futur PermissionSeeder (relancer cette methode les resynchronise).
+     */
+    private function createSuperAdminRole(): Role
+    {
+        $role = Role::firstOrCreate(
+            ['name' => 'super_admin', 'guard_name' => 'web']
+        );
+
+        $role->syncPermissions(Permission::all());
+
+        return $role;
     }
 
     /**
