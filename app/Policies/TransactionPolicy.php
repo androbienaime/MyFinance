@@ -40,6 +40,11 @@ class TransactionPolicy
     {
         return $user->can('transactions.payment');
     }
+    
+    public function createSettlement(User $user): bool
+    {
+        return $user->can('transactions.settlement');
+    }
 
     /**
      * Regle deja verrouillee en dur dans ApproveTransactionAction

@@ -23,9 +23,12 @@ class RoleForm
             'employees' => 'Employes',
             'branches' => 'Succursales',
             'approval-thresholds' => 'Seuils d\'approbation',
+            'account_closures' => "Fermeture de compte",
+            "people" => "Personne",
             'roles' => 'Roles & permissions',
             'reports' => 'Rapports',
             'users' => 'Utilisateurs',
+            
         ];
 
         return Permission::all()
