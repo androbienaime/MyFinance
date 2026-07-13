@@ -2,8 +2,8 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Widgets\Core\GlobalStatsOverview;
-use App\Filament\Widgets\Core\TransactionsChart;
+use App\Filament\Widgets\GlobalStatsOverview;
+use App\Filament\Widgets\TransactionsChart;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -12,9 +12,6 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
-use Filament\Support\Colors\Color;
-use Filament\Widgets\AccountWidget;
-use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -32,6 +29,9 @@ class AdminFinancePanelProvider extends PanelProvider
             ->path('adminFinance')
             ->viteTheme('resources/css/filament/adminFinance/theme.css')
             ->brandName("LTFINANCE")
+            ->brandLogoHeight('4rem')
+            ->brandLogo(asset("/images/logo.png"))
+            ->favicon(asset('images/logo.png'))
             ->login()
             ->colors([
                 'primary' => [
@@ -88,6 +88,9 @@ class AdminFinancePanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
+            ->globalSearch();
     }
 }

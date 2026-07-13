@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Widgets\Core;
+namespace App\Filament\Widgets;
 
 use App\Models\Core\Transaction;
 use Carbon\Carbon;
