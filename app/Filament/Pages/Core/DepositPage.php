@@ -41,6 +41,21 @@ class DepositPage extends Page implements HasSchemas, HasTable
     protected static ?string $title = 'Depots';
     protected string $view = 'filament.pages.deposit-page';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('myfinance.deposit');
+    }
+    
+    public static function getNavigationGroup(): string
+    {
+        return __('myfinance.operations');
+    }
+
+    public static function getNavigationTitle(): string
+    {
+        return __('myfinance.deposits');
+    }
+
     public ?array $data = [];
 
     public function mount(): void
@@ -55,7 +70,7 @@ class DepositPage extends Page implements HasSchemas, HasTable
                 ->columnSpanFull()
                 ->schema([
                     TextInput::make('account_code')
-                        ->label('Code du compte')
+                        ->label(__('myfinance.account_code'))
                         ->required()
                         // debounce plutot que onBlur : se declenche des que
                         // l'utilisateur arrete de taper, sans avoir a sortir
@@ -129,7 +144,7 @@ class DepositPage extends Page implements HasSchemas, HasTable
                     // native de Filament pour un indicateur colore - garantis
                     // reactifs, contrairement au HTML brut via extraInputAttributes.
                     TextInput::make('full_name')
-                        ->label('Titulaire du compte')
+                        ->label(__('myfinance.account_holder'))
                         ->disabled()
                         ->dehydrated(false)
                         ->formatStateUsing(fn (Get $get) => $get('full_name') ?: '—')
@@ -138,7 +153,7 @@ class DepositPage extends Page implements HasSchemas, HasTable
                         ->hintIcon(fn (Get $get) => $get('account_active') === false ? Heroicon::ExclamationTriangle : null),
  
                     TextInput::make('balance')
-                        ->label('Balance Actuelle')
+                        ->label(__("myfinance.current_balance"))
                         ->disabled()
                         ->dehydrated(false)
                         ->prefix('HTG')
@@ -148,7 +163,7 @@ class DepositPage extends Page implements HasSchemas, HasTable
                         ->columnSpanFull(),
  
                     TextInput::make('amount')
-                        ->label('Montant')
+                        ->label(__('myfinance.amount'))
                         ->numeric()
                         ->minValue(1)
                         ->required(fn (Get $get) => ! $get('active_case_payments'))

@@ -26,6 +26,16 @@ class RoleResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Roles';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('myfinance.roles');
+    }
+
+    public static function getNavigationGroup(): string
+    {
+        return __('myfinance.administration');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return RoleForm::configure($schema);

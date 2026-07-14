@@ -23,6 +23,16 @@ class UserResource extends Resource
     protected static string|UnitEnum|null $navigationGroup = 'Administration';
 
 
+    public static function getNavigationLabel(): string
+    {
+        return __('myfinance.users');
+    }
+
+    public static function getNavigationGroup(): string
+    {
+        return __('myfinance.administration');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return UserForm::configure($schema);

@@ -91,6 +91,9 @@ class AdminFinancePanelProvider extends PanelProvider
             ])
             ->databaseNotifications()
             ->databaseNotificationsPolling('30s')
-            ->globalSearch();
+            ->globalSearch(true)
+            ->plugins([
+                // LanguageSwitch::make(),
+            ]);
     }
 }

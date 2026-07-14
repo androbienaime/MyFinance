@@ -39,43 +39,43 @@ trait TransactionsTableTrait
                 return $query;
             })
             ->columns([
-                TextColumn::make('code')->label('Code')->searchable()->copyable(),
-                TextColumn::make('account.code')->label('Compte')->searchable(),
+                // TextColumn::make('code')->label('Code')->searchable()->copyable(),
+                TextColumn::make('account.code')->label(__('myfinance.account'))->searchable(),
 
-                TextColumn::make('account.customer.person.first_name')
-                    ->label('Client')
+                TextColumn::make('account.customer.person.full_name')
+                    ->label(__('myfinance.customer'))
                     ->formatStateUsing(fn ($record) => $record->account?->customer?->person
                         ? "{$record->account->customer->person->first_name} {$record->account->customer->person->last_name}"
                         : '-'),
 
                 TextColumn::make('type')
-                    ->label('Type')
+                    ->label(__('myfinance.type'))
                     ->badge()
                     ->formatStateUsing(fn ($record) => $record->type->label()),
                     // ->color(fn ($record) => $record->type->color()),
 
-                TextColumn::make('amount')->label('Montant')->money('HTG')->sortable(),
+                TextColumn::make('amount')->label(__('myfinance.amount'))->money('HTG')->sortable(),
 
                 TextColumn::make('status')
-                    ->label('Statut')
+                    ->label(__('myfinance.status'))
                     ->badge()
                     ->formatStateUsing(fn ($record) => $record->status->label()),
                     // ->color(fn ($record) => $record->status->color()),
 
                 TextColumn::make('employee.fullName')
-                    ->label('Employe')
+                    ->label(__('myfinance.employee'))
                     ->getStateUsing(fn ($record) => $record->employee?->fullName()),
 
-                TextColumn::make('created_at')->label('Date')->dateTime('d/m/Y H:i')->sortable(),
+                TextColumn::make('created_at')->label(__('myfinance.date'))->dateTime('d/m/Y H:i')->sortable(),
             ])
             ->filters([
                 SelectFilter::make('status')
-                    ->label('Statut')
+                    ->label(__('myfinance.status'))
                     ->options(collect(TransactionStatus::cases())->mapWithKeys(fn ($s) => [$s->value => $s->label()])),
             ])
             ->recordActions([
                 Action::make('approve')
-                    ->label('Approuver')
+                    ->label(__('myfinance.approve'))
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(fn ($record) => $record->status === TransactionStatus::Pending)
@@ -103,7 +103,7 @@ trait TransactionsTableTrait
                     }),
 
                 Action::make('delete')
-                ->label('Supprimer')
+                ->label(__('myfinance.delete'))
                 ->icon('heroicon-o-trash')
                 ->color('danger')
                 ->authorize(fn ($record) => Auth::user()->can('delete', $record))
@@ -125,12 +125,12 @@ trait TransactionsTableTrait
 
             // Historique des approbations - repond a "qui l'a approuve"
             Action::make('viewApprovals')
-                ->label('Historique')
+                ->label(__('myfinance.historical'))
                 ->icon('heroicon-o-clock')
                 ->color('gray')
                 ->modalHeading('Historique des decisions')
                 ->modalSubmitAction(false)
-                ->modalCancelActionLabel('Fermer')
+                ->modalCancelActionLabel(__('myfinance.close'))
                 ->schema(fn ($record) => $record->approvals->map(fn ($approval) =>
                     Placeholder::make("approval_{$approval->id}")
                         ->label("Niveau {$approval->level} — {$approval->decision}")

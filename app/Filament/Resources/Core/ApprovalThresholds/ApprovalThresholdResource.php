@@ -22,6 +22,15 @@ class ApprovalThresholdResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::ShieldExclamation;
     protected static string|UnitEnum|null $navigationGroup = 'Administration';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('myfinance.approval_threshold');
+    }
+
+    public static function getNavigationGroup(): string
+    {
+        return __('myfinance.administration');
+    }
 
     public static function form(Schema $schema): Schema
     {

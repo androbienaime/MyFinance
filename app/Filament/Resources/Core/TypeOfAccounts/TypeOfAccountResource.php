@@ -22,6 +22,16 @@ class TypeOfAccountResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
     protected static string|UnitEnum|null $navigationGroup = 'Administration';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('myfinance.type_of_account');
+    }
+
+    public static function getNavigationGroup(): string
+    {
+        return __('myfinance.administration');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return TypeOfAccountForm::configure($schema);

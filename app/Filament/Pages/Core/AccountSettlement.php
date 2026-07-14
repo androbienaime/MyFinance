@@ -33,6 +33,16 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
     protected static string|UnitEnum|null $navigationGroup = 'Operations';
     protected static ?int $navigationSort = 3;
 
+     public static function getNavigationLabel(): string
+    {
+        return __('myfinance.account_settlement');
+    }
+
+    public static function getNavigationGroup(): string
+    {
+        return __('myfinance.operations');
+    }
+
     use InteractsWithSchemas;
     use InteractsWithTable;
     use TransactionsTableTrait {
@@ -54,7 +64,7 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
                 ->columnSpanFull()
                 ->schema([
                     TextInput::make('account_code')
-                        ->label('Code du compte')
+                        ->label(__("myfinance.account_code"))
                         ->required()
                         // debounce plutot que onBlur : se declenche des que
                         // l'utilisateur arrete de taper, sans avoir a sortir
@@ -130,7 +140,7 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
                     // native de Filament pour un indicateur colore - garantis
                     // reactifs, contrairement au HTML brut via extraInputAttributes.
                     TextInput::make('full_name')
-                        ->label('Titulaire du compte')
+                        ->label(__("myfinance.account_holder"))
                         ->disabled()
                         ->dehydrated(false)
                         ->formatStateUsing(fn (Get $get) => $get('full_name') ?: '—')
@@ -139,7 +149,7 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
                         ->hintIcon(fn (Get $get) => $get('account_active') === false ? Heroicon::ExclamationTriangle : null),
                     
                     Textarea::make('references_people')
-                        ->label('References People')
+                        ->label(__("myfinance.people_associated"))
                         ->disabled()
                         ->dehydrated(false)
                         ->formatStateUsing(fn (Get $get) => $get('full_name') ?: '—')
@@ -149,7 +159,7 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
                         ->columnSpanFull(),
  
                     TextInput::make('balance')
-                        ->label('Balance Actuelle')
+                        ->label(__("myfinance.current_balance"))
                         ->disabled()
                         ->dehydrated(false)
                         ->prefix('HTG')

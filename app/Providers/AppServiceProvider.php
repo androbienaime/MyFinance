@@ -9,6 +9,7 @@ use App\Observers\EmployeeObserver;
 use App\Policies\AccountClosure as PoliciesAccountClosure;
 use App\Policies\PersonPolicy;
 use App\Policies\RolePolicy;
+use BezhanSalleh\LanguageSwitch\LanguageSwitch;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\ServiceProvider;
@@ -27,6 +28,16 @@ class AppServiceProvider extends ServiceProvider
         FilamentAsset::register([
             Js::make('case-grid', resource_path('js/filament/case-grid.js')),
         ]);
+
+        LanguageSwitch::configureUsing(function (LanguageSwitch $switch) {
+            $switch->locales(['en', 'fr', 'ht'])
+            ->outsidePanelRoutes([
+                'auth.login',
+                'auth.register',
+                'auth.password-reset.request',
+                'auth.password-reset.reset',
+            ]);
+        });
     }
 
     /**

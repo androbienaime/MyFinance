@@ -26,6 +26,15 @@ class EmployeeResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::UserGroup;
     protected static string|UnitEnum|null $navigationGroup = 'Administration';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('myfinance.employee');
+    }
+
+    public static function getNavigationGroup(): string
+    {
+        return __('myfinance.administration');
+    }
        /**
      * Filtrage strict (pas juste un tri comme Customer/Transaction) :
      * un Director ne doit meme pas voir dans la liste les employes

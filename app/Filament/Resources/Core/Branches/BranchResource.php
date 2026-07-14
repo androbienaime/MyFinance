@@ -22,9 +22,18 @@ class BranchResource extends Resource
     protected static ?string $model = Branch::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::BuildingLibrary;
-        protected static string|UnitEnum|null $navigationGroup = 'Administration';
+    protected static string|UnitEnum|null $navigationGroup = 'Administration';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('myfinance.branch');
+    }
 
+    public static function getNavigationGroup(): string
+    {
+        return __('myfinance.administration');
+    }
+    
     public static function form(Schema $schema): Schema
     {
         return BranchForm::configure($schema);

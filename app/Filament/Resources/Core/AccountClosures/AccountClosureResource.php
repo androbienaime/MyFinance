@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Override;
 use UnitEnum;
 
 class AccountClosureResource extends Resource
@@ -24,6 +25,16 @@ class AccountClosureResource extends Resource
     protected static ?int $navigationSort = 3;
 
 
+    public static function getNavigationLabel(): string
+    {
+        return __('myfinance.account_closure');
+    }
+
+    #[Override]
+    public static function getNavigationGroup(): string|UnitEnum|null
+    {
+        return __('myfinance.manage_accounts');
+    }
 
     public static function form(Schema $schema): Schema
     {

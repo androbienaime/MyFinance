@@ -24,6 +24,16 @@ class CustomerResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::User;
     protected static string|UnitEnum|null $navigationGroup = 'Manage Accounts';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('myfinance.customer');
+    }
+
+    public static function getNavigationGroup(): string
+    {
+        return __('myfinance.manage_accounts');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return CustomerForm::configure($schema);

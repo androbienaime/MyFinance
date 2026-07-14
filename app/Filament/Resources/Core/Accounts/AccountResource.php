@@ -24,6 +24,17 @@ class AccountResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserCircle;
     protected static string|UnitEnum|null $navigationGroup = 'Manage Accounts';
 
+
+    public static function getNavigationLabel(): string
+    {
+        return __('myfinance.account');
+    }
+
+    public static function getNavigationGroup(): string
+    {
+        return __('myfinance.manage_accounts');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return AccountForm::configure($schema);

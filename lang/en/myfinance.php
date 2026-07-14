@@ -1,0 +1,33 @@
+<?php 
+
+return [
+    "account" => "Account",
+    "customer" => "Customer",
+    "account_closure" => "Acccount Closure",
+    "approval_threshold" => "Approval Threshold",
+    "branch" => "Branch",
+    "employee" => "Employee",
+    "type_of_account" => "Type of Account",
+    "account_settlement" => "Account Settlement",
+    "deposit" => "Deposit",
+    "withdrawal" => 'Withdrawal',
+    "operations" => "Operations",
+    "manage_accounts" => "Manage Accounts",
+    "administration" => "Administration",
+    "users" => "Users",
+    "roles" => "Roles",
+    "deposits" => "Deposits",
+    'date' => 'Date',
+    'close' => 'Close',
+    'historical' => 'Historical',
+    'type' => 'Type',
+    'amount' => "Amount",
+    'delete' => "Delete",
+    "approve" => "Approve",
+    "status" => "Status",
+    "account_holder" => 'Account holder',
+    "account_code" => "Account code",
+    "current_balance" => "Current Balance",
+    "new_deposit" => "New Deposit",
+    
+];

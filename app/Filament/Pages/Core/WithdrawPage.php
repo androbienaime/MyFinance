@@ -39,6 +39,16 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
 
     protected string $view = 'filament.pages.withdraw-page';
 
+     public static function getNavigationLabel(): string
+    {
+        return __('myfinance.withdrawal');
+    }
+
+    public static function getNavigationGroup(): string
+    {
+        return __('myfinance.operations');
+    }
+
     public ?array $data = [];
 
     public function mount(): void
@@ -53,7 +63,7 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                 ->columnSpanFull()
                 ->schema([
                     TextInput::make('account_code')
-                        ->label('Code du compte')
+                        ->label(__('myfinance.account_code'))
                         ->required()
                         ->live(debounce: 600)
                         ->afterStateUpdated(function ($state, callable $set) {
@@ -110,7 +120,7 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                         }),
 
                     TextInput::make('full_name')
-                        ->label('Titulaire du compte')
+                        ->label(__('myfinance.account_holder'))
                         ->disabled()
                         ->dehydrated(false)
                         ->formatStateUsing(fn (Get $get) => $get('full_name') ?: '—')
@@ -119,7 +129,7 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                         ->hintIcon(fn (Get $get) => $get('account_active') === false ? Heroicon::ExclamationTriangle : null),
  
                     TextInput::make('balance')
-                        ->label('Balance Actuelle')
+                        ->label(__('myfinance.current_balance'))
                         ->disabled()
                         ->dehydrated(false)
                         ->prefix('HTG')
@@ -129,7 +139,7 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                         ->columnSpanFull(),
  
                     TextInput::make('amount')
-                        ->label('Montant')
+                        ->label(__('myfinance.amount'))
                         ->numeric()
                         ->minValue(1)
                         ->required()
