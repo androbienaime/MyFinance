@@ -111,6 +111,7 @@ class CustomerForm
                                 ->columns(1)
                                 ->collapsible()
                                 ->itemLabel(fn (array $state): ?string => $state['document_type'] . ':'.$state['document_number'] ?? null),
+                                
                             ]),
                         
                             Repeater::make('addresses')
@@ -231,7 +232,22 @@ class CustomerForm
                 ->columnSpan(3),
                 Grid::make()
                 ->schema([
-                    //
+                    Section::make()
+                        ->schema([
+                            Select::make('phonecode')
+                                ->label(__("myfinance.phone_code"))
+                                ->options(fn () => Country::query()
+                                    ->pluck('phonecode', 'phonecode'))
+                                ->default(fn () => Country::where('name', 'Haiti')->value('phonecode'))
+                                ->preload()
+                                ->searchable()
+                                ->live()
+                                ->required(fn (Get $get): bool => filled($get('phone_number')))
+                                ->dehydrated(),
+
+                            TextInput::make('phone_number')
+                                ->label(__("myfinance.phone")),
+                        ])->columnSpanFull()
                 ])
             ])->columns(4);
     }

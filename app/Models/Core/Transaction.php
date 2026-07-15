@@ -54,7 +54,7 @@ class Transaction extends Model
     public static function generateUniqueCode(int $attempts = 5): string
     {
         for ($i = 0; $i < $attempts; $i++) {
-            $candidate = (string) random_int(100000000, 999999999);
+            $candidate = (string) random_int(10000000000, 99999999999);
 
             if (! static::withTrashed()->where('code', $candidate)->exists()) {
                 return $candidate;

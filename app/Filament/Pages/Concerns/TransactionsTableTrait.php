@@ -8,6 +8,7 @@ use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
 use App\Exceptions\TransactionRejectedException;
 use App\Models\Core\Transaction;
+use App\Notifications\TransactionConfirmed;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
@@ -142,6 +143,18 @@ trait TransactionsTableTrait
                 )->all() ?: [
                     Placeholder::make('none')->label('')->disabled()->content('Aucune approbation enregistree pour cette transaction.'),
                 ]),
+                
+                Action::make('resend_whatsapp')
+                ->label('Renvoyer par WhatsApp')
+                ->icon('heroicon-o-chat-bubble-left-right')
+                ->action(function (Transaction $record) {
+                    $record->account->customer->notify(new TransactionConfirmed($record));
+                    Notification::make()
+                        ->title('Message WhatsApp envoyé')
+                        ->success()
+                        ->send()
+                        ->sendToDatabase(Auth::user()->employee);
+                })
             ])
             ->defaultSort('updated_at', 'desc');
     }

@@ -10,12 +10,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class Employee extends Model implements Deletable
 {
-    use HasFactory, SoftDeletes, HasDeletionGuard;
+    use HasFactory, SoftDeletes, HasDeletionGuard, Notifiable;
 
     protected $fillable = [
         'firstname',

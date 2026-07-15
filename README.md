@@ -103,6 +103,181 @@ par case. Le montant final est **toujours recalcule cote serveur**
 selectionnees — jamais fait confiance a un calcul cote client, meme si
 l'interface (Alpine.js) affiche deja un total estime pour l'ergonomie.
 
+# Intégration WhatsApp — MyFinance
+
+Code complet pour envoyer des notifications WhatsApp automatiques (confirmation de transaction, alerte de dépôt/retrait, etc.) via l'API WhatsApp Cloud de Meta.
+
+## 1. Configuration Meta (une seule fois)
+
+1. Va sur https://developers.facebook.com/ et crée une app de type "Business"
+2. Ajoute le produit "WhatsApp"
+3. Dans le tableau de bord WhatsApp > Getting Started, note :
+   - `Phone number ID`
+   - `Temporary access token` (valide 24h — génère un token permanent ensuite via un System User)
+4. Pour un token permanent : Business Settings > System Users > créer un system user > générer un token avec la permission `whatsapp_business_messaging`
+5. Crée tes templates de message dans Business Manager > WhatsApp Manager > Message Templates (obligatoire pour les notifs "à froid", donc pour presque tout ce qui est automatique). Exemple de template `transaction_confirmee` :
+
+   ```
+   Bonjour, votre {{1}} de {{2}} sur le compte {{3}} a été confirmée.
+   Nouveau solde : {{4}}.
+   ```
+
+   Les templates doivent être approuvés par Meta (généralement quelques minutes à quelques heures).
+
+## 2. .env
+
+```env
+WHATSAPP_PHONE_NUMBER_ID=xxxxxxxxxxxxxxx
+WHATSAPP_ACCESS_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+WHATSAPP_API_VERSION=v20.0
+```
+
+## 3. Fichiers à copier dans ton projet Laravel
+
+```
+app/Services/WhatsAppService.php
+app/Notifications/Channels/WhatsAppChannel.php
+app/Notifications/TransactionConfirmed.php
+```
+
+Et ajoute le contenu de `config/services.php.snippet` dans ton `config/services.php` existant.
+
+## 4. Pré-requis sur le modèle Customer
+
+Ton modèle `Customer` (ou `User`) doit avoir un champ téléphone. S'il n'existe pas encore :
+
+```bash
+php artisan make:migration add_phone_number_to_customers_table
+```
+
+```php
+public function up(): void
+{
+    Schema::table('customers', function (Blueprint $table) {
+        if (!Schema::hasColumn('customers', 'phone_number')) {
+            $table->string('phone_number')->nullable()->after('email');
+        }
+    });
+}
+```
+
+Optionnel mais recommandé — ajoute cette méthode sur le modèle `Customer` pour un routage explicite :
+
+```php
+// app/Models/Customer.php
+
+public function routeNotificationForWhatsApp(): ?string
+{
+    return $this->phone_number;
+}
+```
+
+## 5. Utilisation dans MyFinance
+
+### Depuis une Action existante (ex: après confirmation de dépôt)
+
+```php
+use App\Notifications\TransactionConfirmed;
+
+class DepositAction
+{
+    public function execute(Account $account, float $amount): Transaction
+    {
+        $transaction = DB::transaction(function () use ($account, $amount) {
+            // ... ta logique existante de dépôt (cases-grid, etc.)
+            $transaction = Transaction::create([...]);
+            $account->increment('balance', $amount);
+            return $transaction;
+        });
+
+        // Envoi automatique, ne bloque pas la transaction si WhatsApp échoue
+        $account->customer->notify(new TransactionConfirmed($transaction));
+
+        return $transaction;
+    }
+}
+```
+
+### Depuis un Observer de modèle (déclenchement 100% automatique)
+
+```php
+// app/Observers/TransactionObserver.php
+
+namespace App\Observers;
+
+use App\Models\Transaction;
+use App\Notifications\TransactionConfirmed;
+
+class TransactionObserver
+{
+    public function created(Transaction $transaction): void
+    {
+        if ($transaction->status === 'confirmed') {
+            $transaction->account->customer->notify(
+                new TransactionConfirmed($transaction)
+            );
+        }
+    }
+}
+```
+
+Puis enregistre l'observer dans `app/Providers/AppServiceProvider.php` :
+
+```php
+public function boot(): void
+{
+    Transaction::observe(TransactionObserver::class);
+}
+```
+
+### Depuis une action Filament (ex: bouton "Renvoyer la confirmation")
+
+```php
+use Filament\Tables\Actions\Action;
+
+Action::make('resend_whatsapp')
+    ->label('Renvoyer par WhatsApp')
+    ->icon('heroicon-o-chat-bubble-left-right')
+    ->action(function (Transaction $record) {
+        $record->account->customer->notify(new TransactionConfirmed($record));
+        Notification::make()
+            ->title('Message WhatsApp envoyé')
+            ->success()
+            ->send();
+    });
+```
+
+## 6. Files d'attente (queue)
+
+`TransactionConfirmed` implémente déjà `ShouldQueue` — les envois ne ralentissent pas tes requêtes. Assure-toi que ton worker tourne :
+
+```bash
+php artisan queue:work
+```
+
+En production, utilise Supervisor pour garder `queue:work` actif en permanence.
+
+## 7. Test rapide en tinker
+
+```bash
+php artisan tinker
+```
+
+```php
+app(App\Services\WhatsAppService::class)->sendTemplate(
+    '509XXXXXXXX',
+    'transaction_confirmee',
+    ['Dépôt', '1 500 HTG', 'A00123', '25 000 HTG']
+);
+```
+
+## Notes importantes
+
+- **Numéro de test Meta** : gratuit, mais limité à 5 destinataires pré-enregistrés dans le dashboard. Pour envoyer à n'importe quel client, il faut passer en production (vérification business Meta requise).
+- **Templates obligatoires** hors fenêtre de 24h — c'est le cas pour ~100% des notifications automatiques d'une app financière.
+- **Coût** : les conversations "utility" (comme une confirmation de transaction) sont peu coûteuses sur l'API Meta, mais vérifie la tarification pour Haïti sur https://developers.facebook.com/docs/whatsapp/pricing
+- **Multi-branch** : si tu veux des numéros WhatsApp différents par branche (`BranchScope`), il suffit de stocker plusieurs `phone_number_id` par branche en base et de les injecter dynamiquement dans `WhatsAppService` au lieu de tout lire depuis `config()`.
+
 ### Securite — recapitulatif des protections en place
 
 | Risque | Protection |

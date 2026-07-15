@@ -39,6 +39,10 @@ class CreateCustomer extends CreateRecord
         $data['code'] = 'CL-'.strtoupper(uniqid());
         $data['employee_id'] = Auth::user()->employee?->id;
 
+        if(!empty($data["phone_number"])){
+            $data["phone_number"] = $data["phonecode"].$data["phone_number"]; 
+        }
+
         return $data;
     }
 

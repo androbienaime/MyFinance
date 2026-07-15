@@ -10,10 +10,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Notifications\Notifiable;
 
 class Customer extends Model implements Deletable
 {
-    use HasFactory, SoftDeletes, HasDeletionGuard;
+    use HasFactory, SoftDeletes, HasDeletionGuard, Notifiable;
 
     protected $fillable = [
         'code',
@@ -23,6 +24,7 @@ class Customer extends Model implements Deletable
         'identity_number',
         'employee_id',
         'address_id',
+        'phone_number'
     ];
 
     public function employee(): BelongsTo
@@ -49,6 +51,12 @@ class Customer extends Model implements Deletable
     public function addresses()
     {
         return $this->morphMany(Address::class, 'addressable');
+    }
+
+
+    public function routeNotificationForWhatsApp(): ?string
+    {
+        return $this->phone_number;
     }
 
     /**

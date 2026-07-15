@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Core\Employees\Tables;
 
-use App\Filament\Resources\EmployeeResource\Actions\TransferAction;
+use App\Filament\Resources\Core\Employees\Actions\TransferAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;

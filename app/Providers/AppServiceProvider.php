@@ -5,7 +5,9 @@ namespace App\Providers;
 use App\Models\Core\AccountClosure;
 use App\Models\Core\Employee;
 use App\Models\Core\Person;
+use App\Models\Core\Transaction;
 use App\Observers\EmployeeObserver;
+use App\Observers\TransactionObserver;
 use App\Policies\AccountClosure as PoliciesAccountClosure;
 use App\Policies\PersonPolicy;
 use App\Policies\RolePolicy;
@@ -57,6 +59,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Person::class, PersonPolicy::class);
         
         Employee::observe(EmployeeObserver::class);
+        Transaction::observe(TransactionObserver::class);
+
 
     }
 }

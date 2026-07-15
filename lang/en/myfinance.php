@@ -29,5 +29,6 @@ return [
     "account_code" => "Account code",
     "current_balance" => "Current Balance",
     "new_deposit" => "New Deposit",
-    
+    "people_associated" => "People associated"
+
 ];
