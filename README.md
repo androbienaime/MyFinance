@@ -118,8 +118,8 @@ Code complet pour envoyer des notifications WhatsApp automatiques (confirmation 
 5. Crée tes templates de message dans Business Manager > WhatsApp Manager > Message Templates (obligatoire pour les notifs "à froid", donc pour presque tout ce qui est automatique). Exemple de template `transaction_confirmee` :
 
    ```
-   Bonjour, votre {{1}} de {{2}} sur le compte {{3}} a été confirmée.
-   Nouveau solde : {{4}}.
+   Bonjour {{1}}, votre {{2}} de {{3}} sur le compte {{3}} a été confirmée.
+   Nouveau solde : {{5}}.
    ```
 
    Les templates doivent être approuvés par Meta (généralement quelques minutes à quelques heures).
@@ -132,47 +132,9 @@ WHATSAPP_ACCESS_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 WHATSAPP_API_VERSION=v20.0
 ```
 
-## 3. Fichiers à copier dans ton projet Laravel
 
-```
-app/Services/WhatsAppService.php
-app/Notifications/Channels/WhatsAppChannel.php
-app/Notifications/TransactionConfirmed.php
-```
 
-Et ajoute le contenu de `config/services.php.snippet` dans ton `config/services.php` existant.
-
-## 4. Pré-requis sur le modèle Customer
-
-Ton modèle `Customer` (ou `User`) doit avoir un champ téléphone. S'il n'existe pas encore :
-
-```bash
-php artisan make:migration add_phone_number_to_customers_table
-```
-
-```php
-public function up(): void
-{
-    Schema::table('customers', function (Blueprint $table) {
-        if (!Schema::hasColumn('customers', 'phone_number')) {
-            $table->string('phone_number')->nullable()->after('email');
-        }
-    });
-}
-```
-
-Optionnel mais recommandé — ajoute cette méthode sur le modèle `Customer` pour un routage explicite :
-
-```php
-// app/Models/Customer.php
-
-public function routeNotificationForWhatsApp(): ?string
-{
-    return $this->phone_number;
-}
-```
-
-## 5. Utilisation dans MyFinance
+## 5. Utilisation dans MyFinance(Tout fonctionne déjà très bien. Après chaque transaction, le système enverra automatiquement le message. Cependant, vous pouvez utiliser ces méthodes pour personnaliser l’envoi ou effectuer un renvoi manuel.)
 
 ### Depuis une Action existante (ex: après confirmation de dépôt)
 
@@ -194,29 +156,6 @@ class DepositAction
         $account->customer->notify(new TransactionConfirmed($transaction));
 
         return $transaction;
-    }
-}
-```
-
-### Depuis un Observer de modèle (déclenchement 100% automatique)
-
-```php
-// app/Observers/TransactionObserver.php
-
-namespace App\Observers;
-
-use App\Models\Transaction;
-use App\Notifications\TransactionConfirmed;
-
-class TransactionObserver
-{
-    public function created(Transaction $transaction): void
-    {
-        if ($transaction->status === 'confirmed') {
-            $transaction->account->customer->notify(
-                new TransactionConfirmed($transaction)
-            );
-        }
     }
 }
 ```
