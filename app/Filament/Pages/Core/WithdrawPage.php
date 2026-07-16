@@ -114,7 +114,7 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                                 return;
                             }
 
-                            if (! $hasOperationToAccount) {
+                            if ($hasOperationToAccount) {
                                 $this->addError('data.full_name', 'Vous ne pouvez faire de retrait sur ce type de compte.');
                             }
                         }),
