@@ -15,35 +15,37 @@ class CreateEmployee extends CreateRecord
 {
     protected static string $resource = EmployeeResource::class;
 
-    
     protected function handleRecordCreation(array $data): Model
     {
-        $user = User::create([
-            'name' => trim("{$data['firstname']} {$data['lastname']}"),
-            'email' => $data['user_email'],
-            'password' => Hash::make($data['user_password']),
-            'is_active' => true,
-            'must_change_password' => true,
-        ]);
+        // Autorise explicitement la création de User pour ce contexte précis
+        app()->instance('creating_user_via_employee', true);
 
-        if (! empty($data['role_id'])) {
-            $role = Role::find($data['role_id']);
+        try {
+            $user = User::create([
+                'name' => trim("{$data['firstname']} {$data['lastname']}"),
+                'email' => $data['user_email'],
+                'password' => Hash::make($data['user_password']),
+                'is_active' => true,
+                'must_change_password' => true,
+            ]);
 
-            if ($role) {
-                // Meme regle qu'utiliserait une future API : rien de
-                // duplique, rien d'oubliable.
-                app(AssignRoleToUserAction::class)->handle($user, $role, Auth::user());
+            if (! empty($data['role_id'])) {
+                $role = Role::find($data['role_id']);
+
+                if ($role) {
+                    app(AssignRoleToUserAction::class)->handle($user, $role, Auth::user());
+                }
             }
+
+            return static::getModel()::create([
+                'firstname' => $data['firstname'],
+                'lastname' => $data['lastname'],
+                'identity_number' => $data['identity_number'] ?? null,
+                'branch_id' => $data['branch_id'],
+                'user_id' => $user->id,
+            ]);
+        } finally {
+            app()->forgetInstance('creating_user_via_employee');
         }
-
-        return static::getModel()::create([
-            'firstname' => $data['firstname'],
-            'lastname' => $data['lastname'],
-            'identity_number' => $data['identity_number'] ?? null,
-            'branch_id' => $data['branch_id'],
-            'user_id' => $user->id,
-        ]);
     }
-
-
 }

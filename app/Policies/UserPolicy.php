@@ -51,4 +51,23 @@ class UserPolicy
     {
         return false;
     }
+
+    public function deactivate(User $user, User $model): bool
+    {
+        if ($user->id === $model->id) {
+            return false;
+        }
+
+        return $user->can('users.deactivate');
+    }
+
+    public function reactivate(User $user, User $model): bool
+    {
+        return $user->can('users.reactivate');
+    }
+
+    public function forceLogout(User $user, User $model): bool
+    {
+        return $user->can('users.force_logout');
+    }
 }

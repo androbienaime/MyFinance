@@ -4,13 +4,17 @@ namespace App\Providers;
 
 use App\Models\Core\AccountClosure;
 use App\Models\Core\Employee;
+use App\Models\Core\LoginAttempt;
 use App\Models\Core\Person;
 use App\Models\Core\Transaction;
+use App\Models\Core\TrustedDevice;
 use App\Observers\EmployeeObserver;
 use App\Observers\TransactionObserver;
 use App\Policies\AccountClosure as PoliciesAccountClosure;
+use App\Policies\LoginAttemptPolicy;
 use App\Policies\PersonPolicy;
 use App\Policies\RolePolicy;
+use App\Policies\TrustedDevicePolicy;
 use BezhanSalleh\LanguageSwitch\LanguageSwitch;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
@@ -57,6 +61,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(\App\Models\Core\TypeOfAccount::class, \App\Policies\TypeOfAccountResourcePolicy::class);
         Gate::policy(AccountClosure::class, PoliciesAccountClosure::class);
         Gate::policy(Person::class, PersonPolicy::class);
+        Gate::policy(LoginAttempt::class, LoginAttemptPolicy::class);
+        Gate::policy(TrustedDevice::class, TrustedDevicePolicy::class);
         
         Employee::observe(EmployeeObserver::class);
         Transaction::observe(TransactionObserver::class);

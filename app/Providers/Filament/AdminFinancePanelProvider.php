@@ -2,8 +2,11 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\ForcePasswordChange;
+use App\Filament\Pages\Auth\Login;
 use App\Filament\Widgets\GlobalStatsOverview;
 use App\Filament\Widgets\TransactionsChart;
+use App\Http\Middleware\RequirePasswordChange;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -33,7 +36,7 @@ class AdminFinancePanelProvider extends PanelProvider
             ->brandLogoHeight('4rem')
             ->brandLogo(asset("/images/logo.png"))
             ->favicon(asset('images/logo.png'))
-            ->login()
+            ->login(Login::class)
             ->colors([
                 'primary' => [
                     50  => '#eef8ff',
@@ -70,6 +73,7 @@ class AdminFinancePanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
                 Dashboard::class,
+                ForcePasswordChange::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
@@ -89,6 +93,7 @@ class AdminFinancePanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                RequirePasswordChange::class, // à ajouter dans authMiddleware(), après auth
             ])
             ->databaseNotifications()
             ->databaseNotificationsPolling('30s')

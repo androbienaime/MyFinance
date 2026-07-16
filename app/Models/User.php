@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -27,6 +28,11 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         'email',
         'password',
         'is_active',
+        'deactivated_at',
+        'deactivation_reason',
+        'deactivated_by',
+        'must_change_password',
+        'password_changed_at'
     ];
 
     protected $hidden = [
@@ -38,9 +44,27 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     {
         return [
             'email_verified_at' => 'datetime',
+            'deactivated_at' => 'datetime',
+            'password_changed_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user) {
+            $allowedContexts = [
+                App::runningInConsole(), // artisan (install, make-user, seeders)
+                app()->bound('creating_user_via_employee'), // flag posé par le service employee
+            ];
+
+            if (!in_array(true, $allowedContexts, true)) {
+                throw new \RuntimeException(
+                    'La création directe de User est interdite. Utilisez le module Employee.'
+                );
+            }
+        });
     }
 
     public function initials(): string
@@ -69,6 +93,29 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     public function currentBranchId(): ?int
     {
         return $this->employee?->branch_id;
+    }
+
+    public function deactivate(string $reason, ?User $by = null): void
+    {
+        $this->update([
+            'is_active' => false,
+            'deactivated_at' => now(),
+            'deactivation_reason' => $reason,
+            'deactivated_by' => $by?->id,
+        ]);
+
+        // Déconnexion immédiate de toutes ses sessions actives
+        \Illuminate\Support\Facades\DB::table('sessions')->where('user_id', $this->id)->delete();
+    }
+
+    public function reactivate(): void
+    {
+        $this->update([
+            'is_active' => true,
+            'deactivated_at' => null,
+            'deactivation_reason' => null,
+            'deactivated_by' => null,
+        ]);
     }
     
 }

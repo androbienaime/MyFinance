@@ -23,6 +23,11 @@ class UserResource extends Resource
     protected static string|UnitEnum|null $navigationGroup = 'Administration';
 
 
+    public static function canCreate(): bool
+    {
+        return false; // masque totalement le bouton "Créer" dans Filament
+    }
+
     public static function getNavigationLabel(): string
     {
         return __('myfinance.users');
@@ -54,7 +59,6 @@ class UserResource extends Resource
     {
         return [
             'index' => ListUsers::route('/'),
-            'create' => CreateUser::route('/create'),
             'edit' => EditUser::route('/{record}/edit'),
         ];
     }
