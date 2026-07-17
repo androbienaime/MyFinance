@@ -49,6 +49,11 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
         return __('myfinance.operations');
     }
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->can('transactions.withdraw') ?? false;
+    }
+
     public ?array $data = [];
 
     public function mount(): void

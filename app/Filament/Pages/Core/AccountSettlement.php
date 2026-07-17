@@ -50,6 +50,11 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
     }
 
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->can('transactions.settlement') ?? false;
+    }
+
     public ?array $data = [];
 
     public function mount(): void

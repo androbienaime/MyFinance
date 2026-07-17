@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Roles\Tables;
 
 use App\Models\Core\Role;
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
@@ -35,11 +36,10 @@ class RolesTable
             ->recordActions([
                 EditAction::make()
                 ->disabled(fn (Role $record) => !self::canUpdate($record)),
+                DeleteAction::make()
             ])
             ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+
             ])->defaultSort('updated_at', 'desc');
     }
 

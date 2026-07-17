@@ -56,6 +56,11 @@ class DepositPage extends Page implements HasSchemas, HasTable
         return __('myfinance.deposits');
     }
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->can('transactions.deposit') ?? false;
+    }
+
     public ?array $data = [];
 
     public function mount(): void

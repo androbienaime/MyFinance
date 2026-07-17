@@ -36,6 +36,14 @@ class Role extends SpatieRole
                 ]);
             }
         });
+
+        static::deleting(function (Role $role) {
+            if ($role->isProtected($role)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'name' => "Le rôle « {$role->name} » ne peut pas être supprimé (rôle protégé).",
+                ]);
+            }
+        });
     }
 
     /**
@@ -89,5 +97,13 @@ class Role extends SpatieRole
                 $q->orWhereIn('id', $ownRoleIds);
             }
         });
+    }
+
+    /**
+     * Le rôle super_admin est intouchable, peu importe qui fait la demande.
+     */
+    public function isProtected(Role $role): bool
+    {
+        return $role->level === 100 || $role->name === 'super_admin';
     }
 }

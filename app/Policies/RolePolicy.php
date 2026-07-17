@@ -7,13 +7,7 @@ use App\Models\Core\Role;
 
 class RolePolicy
 {
-    /**
-     * Le rôle super_admin est intouchable, peu importe qui fait la demande.
-     */
-    protected function isProtected(Role $role): bool
-    {
-        return $role->level === 100 || $role->name === 'super_admin';
-    }
+    
 
     public function viewAny(User $user): bool
     {
@@ -46,7 +40,7 @@ class RolePolicy
 
     public function update(User $user, Role $role): bool
     {
-        if ($this->isProtected($role)) {
+        if ($role->isProtected($role)) {
             return false;
         }
 
@@ -59,7 +53,7 @@ class RolePolicy
 
     public function delete(User $user, Role $role): bool
     {
-        if ($this->isProtected($role)) {
+        if ($role->isProtected($role)) {
             return false;
         }
 
