@@ -152,11 +152,17 @@ class RoleForm
         }
 
         $userMaxLevel = $user->roles()->max('level') ?? 0;
+        $userPermissionIds = $user->getAllPermissions()->pluck('id');
 
         $levelRequirements = PermissionLevelRequirement::pluck('min_level_to_assign', 'permission_id');
 
         return Permission::all()
-            ->filter(fn (Permission $permission) => ($levelRequirements->get($permission->id, 0)) <= $userMaxLevel)
+            ->filter(function (Permission $permission) use ($levelRequirements, $userMaxLevel, $userPermissionIds) {
+                $levelOk = ($levelRequirements->get($permission->id, 0)) <= $userMaxLevel;
+                $possessed = $userPermissionIds->contains($permission->id);
+
+                return $levelOk && $possessed;
+            })
             ->pluck('id');
     }
 }

@@ -55,23 +55,45 @@ class Role extends SpatieRole
      */
     public function syncPermissionsSecurely(array $permissionIds): void
     {
+        // if ($this->isProtected()) {
+        //     $this->permissions()->sync(Permission::pluck('id'));
+        //     return;
+        // }
+
         if (Auth::check() && !app()->runningInConsole() && !Auth::user()->isSuperAdmin()) {
-            $userMaxLevel = Auth::user()->roles()->max('level') ?? 0;
+            $actor = Auth::user();
+            $userMaxLevel = $actor->roles()->max('level') ?? 0;
+            $actorPermissionIds = $actor->getAllPermissions()->pluck('id');
 
             $levelRequirements = PermissionLevelRequirement::whereIn('permission_id', $permissionIds)
                 ->pluck('min_level_to_assign', 'permission_id');
 
-            $forbidden = collect($permissionIds)->filter(
-                fn ($id) => ($levelRequirements->get($id, 0)) > $userMaxLevel
-            );
+            $forbidden = collect($permissionIds)->filter(function ($id) use ($levelRequirements, $userMaxLevel, $actorPermissionIds) {
+                $levelTooHigh = ($levelRequirements->get($id, 0)) > $userMaxLevel;
+                $notPossessed = !$actorPermissionIds->contains($id);
+
+                return $levelTooHigh || $notPossessed;
+            });
 
             if ($forbidden->isNotEmpty()) {
                 $names = Permission::whereIn('id', $forbidden)->pluck('name')->implode(', ');
 
                 throw ValidationException::withMessages([
-                    'permissions' => "Vous n'avez pas le niveau requis pour accorder : {$names}",
+                    'permissions' => "Vous n'avez pas le niveau requis ou vous ne possédez pas vous-même : {$names}",
                 ]);
             }
+
+            // Préserve les permissions existantes hors du champ de vision de
+            // l'acteur (celles qu'il ne pouvait ni voir ni décocher).
+            $currentPermissionIds = $this->permissions()->pluck('permissions.id');
+            $outOfActorScope = $currentPermissionIds->filter(function ($id) use ($levelRequirements, $userMaxLevel, $actorPermissionIds) {
+                $levelTooHigh = ($levelRequirements->get($id, 0)) > $userMaxLevel;
+                $notPossessed = !$actorPermissionIds->contains($id);
+
+                return $levelTooHigh || $notPossessed;
+            });
+
+            $permissionIds = collect($permissionIds)->merge($outOfActorScope)->unique()->values()->all();
         }
 
         $this->permissions()->sync($permissionIds);
