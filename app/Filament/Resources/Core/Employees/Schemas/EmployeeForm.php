@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Core\Employees\Schemas;
 
+use App\Models\Core\Role;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -15,7 +16,6 @@ use Filament\Support\RawJs;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Password;
-use Spatie\Permission\Models\Role;
 
 class EmployeeForm
 {
@@ -140,7 +140,7 @@ class EmployeeForm
                         ->label('Role')
                         ->options(fn () => static::assignableRoles())
                         ->searchable()
-                        ->visible(fn () => Auth::user()->can('roles.manage'))
+                        ->visible(fn () => Auth::user()->can('roles.assign'))
                         ->helperText('Optionnel : peut aussi etre attribue plus tard depuis la fiche employe.')
                         // Le champ n'est pas lie a une vraie relation (justement pour eviter
                         // que Filament sync() directement sans passer par AssignRoleToUserAction),
@@ -171,10 +171,25 @@ class EmployeeForm
      * Reutilisee cote serveur dans CreateEmployee/EditEmployee pour
      * revalider, au cas ou le champ aurait ete manipule directement.
      */
-    public static function assignableRoles()
+    // public static function assignableRoles()
+    // {
+    //     return \App\Models\Core\Role::query()
+    //     ->assignableBy(Auth::user())
+    //     ->pluck('name', 'id');
+    // }
+
+    public static function assignableRoles(): \Illuminate\Support\Collection
     {
-        return \App\Models\Core\Role::query()
-        ->assignableBy(Auth::user())
-        ->pluck('name', 'id');
+        $actor = Auth::user();
+        $actorMaxLevel = $actor->roles()->max('level') ?? 0;
+
+        return Role::query()
+            ->when(
+                !$actor->isSuperAdmin(),
+                fn ($query) => $query->where('level', '<', $actorMaxLevel)
+            )
+            ->get()
+            ->reject(fn (Role $role) => $role->isHeadOfficeRole() && !$actor->isHeadOffice())
+            ->pluck('name', 'id');
     }
 }

@@ -17,7 +17,6 @@ class CreateEmployee extends CreateRecord
 
     protected function handleRecordCreation(array $data): Model
     {
-        // Autorise explicitement la création de User pour ce contexte précis
         app()->instance('creating_user_via_employee', true);
 
         try {
@@ -29,13 +28,10 @@ class CreateEmployee extends CreateRecord
                 'must_change_password' => true,
             ]);
 
-            if (! empty($data['role_id'])) {
-                $role = Role::find($data['role_id']);
+            $role = !empty($data['role_id']) ? Role::find($data['role_id']) : null;
 
-                if ($role) {
-                    app(AssignRoleToUserAction::class)->handle($user, $role, Auth::user());
-                }
-            }
+            // handle() gère nativement le cas $role = null (aucun rôle attribué à la création)
+            app(AssignRoleToUserAction::class)->handle($user, $role, Auth::user());
 
             return static::getModel()::create([
                 'firstname' => $data['firstname'],

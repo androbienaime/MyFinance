@@ -1,34 +1,70 @@
-<?php
+<?php 
 
 namespace App\Policies;
 
 use App\Models\User;
-use Spatie\Permission\Models\Role;
+use App\Models\Core\Role;
 
 class RolePolicy
 {
+    /**
+     * Le rôle super_admin est intouchable, peu importe qui fait la demande.
+     */
+    protected function isProtected(Role $role): bool
+    {
+        return $role->level === 100 || $role->name === 'super_admin';
+    }
+
     public function viewAny(User $user): bool
     {
-        return $user->can('roles.manage');
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+        return $user->can('roles.view_any');
     }
 
     public function view(User $user, Role $role): bool
     {
-        return $user->can('roles.manage');
+        if (!$user->can('roles.view')) {
+            return false;
+        }
+
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        $userMaxLevel = $user->roles()->max('level') ?? 0;
+        $isOwnRole = $user->roles()->where('roles.id', $role->id)->exists();
+
+        return $role->level < $userMaxLevel || $isOwnRole;
     }
 
     public function create(User $user): bool
     {
-        return $user->can('roles.manage');
+        return $user->can('roles.assign');
     }
 
     public function update(User $user, Role $role): bool
     {
-        return $user->can('roles.manage');
+        if ($this->isProtected($role)) {
+            return false;
+        }
+
+        // Volontairement STRICT (<) — pas d'exception pour son propre rôle,
+        // donc édition bloquée même en cas de "voir en lecture seule".
+        $userMaxLevel = $user->roles()->max('level') ?? 0;
+
+        return $user->can('roles.assign') && ($role->level < $userMaxLevel || $user->isSuperAdmin());
     }
 
     public function delete(User $user, Role $role): bool
     {
-        return $user->can('roles.manage');
+        if ($this->isProtected($role)) {
+            return false;
+        }
+
+        $userMaxLevel = $user->roles()->max('level') ?? 0;
+
+        return $user->can('roles.assign') && ($role->level < $userMaxLevel || $user->isSuperAdmin());
     }
 }

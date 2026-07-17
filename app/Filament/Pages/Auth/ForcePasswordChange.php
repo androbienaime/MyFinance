@@ -48,38 +48,32 @@ class ForcePasswordChange extends Page implements HasForms
     {
         return $schema
             ->components([
-                Grid::make([
-                    'default' => 1,
-                    'sm' => 3,
-                ])
+                Grid::make(1)
                     ->schema([
-                        Grid::make(1)
-                            ->schema([
-                                TextInput::make('current_password')
-                                    ->label('Mot de passe actuel')
-                                    ->password()
-                                    ->revealable()
-                                    ->required(),
+                        TextInput::make('current_password')
+                            ->label('Mot de passe actuel')
+                            ->password()
+                            ->revealable()
+                            ->required(),
 
-                                TextInput::make('new_password')
-                                    ->label('Nouveau mot de passe')
-                                    ->password()
-                                    ->revealable()
-                                    ->required()
-                                    ->rule(Password::min(8)->mixedCase()->numbers()->symbols()->uncompromised())
-                                    ->different('current_password')
-                                    ->helperText('Minimum 8 caractères, majuscules, minuscules, chiffres et symboles.'),
+                        TextInput::make('new_password')
+                            ->label('Nouveau mot de passe')
+                            ->password()
+                            ->revealable()
+                            ->required()
+                            ->rule(Password::min(8)->mixedCase()->numbers()->symbols()->uncompromised())
+                            ->different('current_password')
+                            ->helperText('Minimum 8 caractères, majuscules, minuscules, chiffres et symboles.'),
 
-                                TextInput::make('new_password_confirmation')
-                                    ->label('Confirmer le nouveau mot de passe')
-                                    ->password()
-                                    ->revealable()
-                                    ->same('new_password')
-                                    ->required(),
-                            ])
-                            ->columnSpan(1)
-                            ->columnStart(['sm' => 2]),
-                    ]),
+                        TextInput::make('new_password_confirmation')
+                            ->label('Confirmer le nouveau mot de passe')
+                            ->password()
+                            ->revealable()
+                            ->same('new_password')
+                            ->required(),
+                    ])
+                    ->columnSpanFull()
+                    ->columnStart(['sm' => 2]),
             ])
             ->statePath('data');
     }

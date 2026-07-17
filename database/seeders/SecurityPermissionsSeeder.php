@@ -26,6 +26,10 @@ class SecurityPermissionsSeeder extends Seeder
 
             // Rôles
             'roles.assign',
+            'roles.view_any',
+            'roles.view',
+            'permissions.assign_any', // bypass total, réservé au super_admin
+
         ];
 
         foreach ($permissions as $permission) {

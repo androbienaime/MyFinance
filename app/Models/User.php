@@ -117,5 +117,19 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             'deactivated_by' => null,
         ]);
     }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->roles()->max('level') >= 100; // ou une permission dédiée 'system.bypass_all'
+    }
+
+    public function assignablePermissionIds(): \Illuminate\Support\Collection
+    {
+        if ($this->isSuperAdmin()) {
+            return \Spatie\Permission\Models\Permission::pluck('id');
+        }
+
+        return $this->getAllPermissions()->pluck('id');
+    }
     
 }

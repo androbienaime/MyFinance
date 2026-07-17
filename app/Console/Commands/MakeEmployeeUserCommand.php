@@ -66,6 +66,12 @@ class MakeEmployeeUserCommand extends Command
             // privilegie, pas d'utilisateur Filament "acteur" a proteger
             // contre lui-meme), contrairement au formulaire employe du panel.
             $user->assignRole($role);
+              \App\Models\Core\RoleAssignmentLog::create([
+                'user_id' => $user->id,
+                'role_id' => $role->id,
+                'assigned_by' => null, // bootstrap système, aucun acteur humain
+                'assigned_at' => now(),
+            ]);
         }
 
         $this->newLine();
@@ -148,15 +154,19 @@ class MakeEmployeeUserCommand extends Command
      */
     private function createSuperAdminRole(): Role
     {
-        $role = Role::firstOrCreate(
-            ['name' => 'super_admin', 'guard_name' => 'web']
+        // updateOrCreate plutôt que firstOrCreate : si ce role existe déjà mais
+        // avec un level incorrect (bug d'une exécution précédente, ou migration
+        // manuelle malencontreuse), on le corrige à chaque appel plutôt que de
+        // le figer une fois pour toutes.
+        $role = Role::updateOrCreate(
+            ['name' => 'super_admin', 'guard_name' => 'web'],
+            ['level' => 100]
         );
 
         $role->syncPermissions(Permission::all());
 
         return $role;
     }
-
     /**
      * @return array{0: string, 1: string}
      */

@@ -28,10 +28,14 @@ class RoleForm
             'roles' => 'Roles & permissions',
             'reports' => 'Rapports',
             'users' => 'Utilisateurs',
-            
+            'login_attempts' => 'Historique des connexions',
+            'trusted_devices' => 'Trusted Devices',
         ];
 
-        return Permission::all()
+        $assignablePermissionIds = static::assignablePermissionIds();
+
+        return Permission::whereIn('id', $assignablePermissionIds)
+            ->get()
             ->groupBy(fn (Permission $permission) => Str::before($permission->name, '.'))
             ->map(fn ($permissions, $prefix) => [
                 'label' => $labels[$prefix] ?? Str::headline($prefix),
@@ -55,7 +59,7 @@ class RoleForm
                     Section::make('Informations du rôle')
                         ->icon('heroicon-o-shield-check')
                         ->description('Définissez les informations principales du rôle.')
-                        ->columns(2)
+                        ->columns(3)
                         ->schema([
                             TextInput::make('name')
                                 ->label('Nom du rôle')
@@ -68,6 +72,24 @@ class RoleForm
                                 ->default('web')
                                 ->disabled()
                                 ->dehydrated(),
+                            TextInput::make('level')
+                                ->label('Niveau hiérarchique')
+                                ->numeric()
+                                ->required()
+                                ->default(0)
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->rule(function () {
+                                    return function (string $attribute, $value, \Closure $fail) {
+                                        $currentUserMaxLevel = auth()->user()->roles()->max('level') ?? 0;
+
+                                        if ((int) $value >= $currentUserMaxLevel) {
+                                            $fail("Vous ne pouvez pas créer ou modifier un rôle avec un niveau supérieur ou égal au vôtre ({$currentUserMaxLevel}).");
+                                        }
+                                    };
+                                })
+                                ->helperText('Plus le niveau est élevé, plus le rôle est privilégié. Un utilisateur ne peut assigner que des rôles de niveau strictement inférieur au sien.')
+                                ,
                         ]),
                 ]),
 
@@ -112,5 +134,28 @@ class RoleForm
                     })->values()->all()
                 ),
         ])->columns(1);
+    }
+
+
+    /**
+     * Un super_admin (ou quiconque a la permission système `permissions.assign_any`)
+     * voit tout. Les autres ne voient que les permissions qu'ils possèdent déjà,
+     * directement ou via leurs rôles.
+     */
+    protected static function assignablePermissionIds(): Collection
+    {
+        $user = auth()->user();
+
+        if ($user->isSuperAdmin()) {
+            return Permission::pluck('id');
+        }
+
+        $userMaxLevel = $user->roles()->max('level') ?? 0;
+
+        $levelRequirements = \App\Models\Core\PermissionLevelRequirement::pluck('min_level_to_assign', 'permission_id');
+
+        return Permission::all()
+            ->filter(fn (Permission $permission) => ($levelRequirements->get($permission->id, 0)) <= $userMaxLevel)
+            ->pluck('id');
     }
 }

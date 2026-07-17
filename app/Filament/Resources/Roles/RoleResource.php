@@ -5,14 +5,15 @@ namespace App\Filament\Resources\Roles;
 use App\Filament\Resources\Roles\Pages;
 use App\Filament\Resources\Roles\Schemas\RoleForm;
 use App\Filament\Resources\Roles\Tables\RolesTable;
+use App\Models\Core\Role;
 use BackedEnum;
 use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 class RoleResource extends Resource
 {
@@ -34,6 +35,12 @@ class RoleResource extends Resource
     public static function getNavigationGroup(): string
     {
         return __('myfinance.administration');
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->visibleTo(auth()->user());
     }
 
     public static function form(Schema $schema): Schema
