@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Roles\Schemas;
 
+use App\Models\Core\PermissionLevelRequirement;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
@@ -152,7 +153,7 @@ class RoleForm
 
         $userMaxLevel = $user->roles()->max('level') ?? 0;
 
-        $levelRequirements = \App\Models\Core\PermissionLevelRequirement::pluck('min_level_to_assign', 'permission_id');
+        $levelRequirements = PermissionLevelRequirement::pluck('min_level_to_assign', 'permission_id');
 
         return Permission::all()
             ->filter(fn (Permission $permission) => ($levelRequirements->get($permission->id, 0)) <= $userMaxLevel)
