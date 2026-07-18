@@ -21,13 +21,13 @@ class InstallCommand extends Command
     public function handle(): int
     {
         $this->components->info('Installation de MyFinance');
-        $this->call("optimize");
         $this->ensureEnvFile();
         $this->ensureAppKey();
+        $this->call('optimize'); // seulement une fois la clé garantie
         $this->runMigrations();
         $this->runSeeders();
         $this->publishFilamentAssets();
-
+        
         if (! $this->option('skip-user')) {
             $this->createFirstUser();
         }
