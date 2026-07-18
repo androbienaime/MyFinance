@@ -31,7 +31,7 @@ class TransactionConfirmed extends Notification implements ShouldQueue
         $montant = number_format($this->transaction->amount, 2) . ' HTG';
         $type    = $this->transaction->type?->label() ?? 'Transaction';
         $compte  = $this->transaction->account->code ?? '';
-        $full_name = $this->transaction->account->customer->person->full_name ?? '';
+        $full_name = $this->transaction->account->customer->person->full_name ?? ' ';
         $transaction_id = $this->transaction->code ?? '';
         $solde   = number_format($this->transaction->account->balance, 2) . ' HTG';
         $date = $this->transaction->created_at;
