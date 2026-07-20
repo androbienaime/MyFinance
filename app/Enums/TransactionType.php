@@ -9,6 +9,9 @@ enum TransactionType: string
     case AccountSettlement  = 'accountSettlement';
     case AccountClosure = 'accountClosure';
     case AccountRestoration = 'AccountRestoration';
+    case Transfer = 'transfer';
+    case TransferFee = 'transfer_fee';
+
 
     public function label(): string
     {
@@ -18,6 +21,8 @@ enum TransactionType: string
             self::AccountSettlement  => 'Account Settlement',
             self::AccountClosure => 'Account Closure',
             self::AccountRestoration => 'Account Restoration',
+            self::Transfer => 'Transfert',
+            self::TransferFee => 'Frais de virement',
         };
     }
 }
