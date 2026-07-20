@@ -61,7 +61,8 @@ class EmployeesTable
             ])
             ->recordActions([
                 EditAction::make(),
-                TransferAction::make(),
+                TransferAction::make()
+                ->visible(fn (Employee $record) => !$record->user->roles->first()->isProtected(null)),
                 Action::make('forceLogout')
                 ->label('Déconnecter à distance')
                 ->icon('heroicon-o-power')
@@ -110,11 +111,11 @@ class EmployeesTable
 ,
             ])
             ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
-                ]),
+                // BulkActionGroup::make([
+                //     DeleteBulkAction::make(),
+                //     ForceDeleteBulkAction::make(),
+                //     RestoreBulkAction::make(),
+                // ]),
             ])->defaultSort('updated_at', 'desc');
     }
 }

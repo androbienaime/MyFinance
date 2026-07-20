@@ -5,6 +5,7 @@ namespace App\Models\Core;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role as SpatieRole;
@@ -124,8 +125,32 @@ class Role extends SpatieRole
     /**
      * Le rôle super_admin est intouchable, peu importe qui fait la demande.
      */
-    public function isProtected(Role $role): bool
+    public function isProtected(?Role $role = null): bool
     {
+        $role ??= $this;
         return $role->level === 100 || $role->name === 'super_admin';
+    }
+
+
+     /**
+     * Les utilisateurs ayant ce rôle.
+     */
+    public function users(): MorphToMany
+    {
+        return $this->morphedByMany(
+            User::class,
+            'model',
+            config('permission.table_names.model_has_roles'),
+            app(\Spatie\Permission\PermissionRegistrar::class)->pkey,
+            config('permission.column_names.model_morph_key')
+        );
+    }
+
+      /**
+     * Nombre d'utilisateurs ayant ce rôle.
+     */
+    public function activeUsersCount(): int
+    {
+        return $this->users()->count();
     }
 }
