@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Core;
 
 use App\Actions\WithdrawAction;
+use App\Enums\TransactionType;
 use App\Exceptions\TransactionRejectedException;
 use App\Filament\Pages\Concerns\TransactionsTableTrait;
 use App\Models\Core\Account;
@@ -52,6 +53,18 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
     public static function canAccess(): bool
     {
         return auth()->user()?->can('transactions.withdraw') ?? false;
+    }
+
+    protected function showTransferColumns(): bool
+    {
+        return false;
+    }
+
+    protected function transactionsTableScope($query): void
+    {
+        $query->where('type', TransactionType::Deposit)
+            ->orWhere('type', TransactionType::Withdrawal)
+            ->orWhere('type', TransactionType::AccountSettlement);
     }
 
     public ?array $data = [];

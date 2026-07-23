@@ -3,6 +3,8 @@
 namespace App\Models\Core;
 
 use App\Contracts\Deletable;
+use App\Enums\TransactionDirection;
+use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
 use App\Models\Concerns\HasDeletionGuard;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -130,5 +132,24 @@ class Account extends Model implements Deletable
 
             return $closure;
         });
+    }
+
+    public function pendingDebitsTotal(): float
+    {
+        return (float) $this->transactions()
+            ->where('status', TransactionStatus::Pending->value)
+            ->where(function ($q) {
+                $q->where('type', TransactionType::Withdrawal->value)
+                    ->orWhere(function ($q2) {
+                        $q2->where('type', TransactionType::Transfer->value)
+                            ->where('direction', TransactionDirection::Debit->value);
+                    });
+            })
+            ->sum('amount');
+    }
+
+    public function availableBalance(): float
+    {
+        return (float) $this->balance - $this->pendingDebitsTotal();
     }
 }

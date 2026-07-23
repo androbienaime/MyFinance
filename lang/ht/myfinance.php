@@ -29,4 +29,6 @@ return [
     "current_balance" => "Balans Aktyèl",
     "new_deposit" => "Nouvo Depo",
     "people_associated" => "Moun ki asosye yo",
+    "transfer" => "Transfè"
+
 ];
