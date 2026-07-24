@@ -30,7 +30,8 @@ return [
     "new_deposit" => "Nouveau Dépot",
     "people_associated" => "Personnes associées",
 
-    "transfer" => "Transfert"
+    "transfer" => "Transfert",
+    "settings" => "Paramètres"
 
     
 ];

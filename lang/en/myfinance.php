@@ -31,5 +31,6 @@ return [
     "new_deposit" => "New Deposit",
     "people_associated" => "People associated",
 
-    "transfer" => "Transfer"
+    "transfer" => "Transfer",
+    "settings" => "Settings"
 ];

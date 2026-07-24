@@ -25,6 +25,7 @@ use App\Policies\PersonPolicy;
 use App\Policies\RoleAssignmentLogPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\TrustedDevicePolicy;
+use App\Services\SettingsOptionsResolver;
 use BezhanSalleh\LanguageSwitch\LanguageSwitch;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
@@ -54,6 +55,14 @@ class AppServiceProvider extends ServiceProvider
                 'auth.password-reset.reset',
             ]);
         });
+
+        SettingsOptionsResolver::register('roles', function () {
+            return \Spatie\Permission\Models\Role::pluck('name', 'id')->toArray();
+        });
+
+        SettingsOptionsResolver::register('branches', function () {
+            return \App\Models\Core\Branch::pluck('name', 'id')->toArray();
+        });
     }
 
     /**
@@ -81,6 +90,8 @@ class AppServiceProvider extends ServiceProvider
 
         Employee::observe(EmployeeObserver::class);
         Transaction::observe(TransactionObserver::class);
+
+
 
 
     }

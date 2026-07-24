@@ -48,6 +48,10 @@ class TransferPage extends Page implements HasSchemas, HasTable
 
     public static function canAccess(): bool
     {
+        if (! setting('transactions.transfer_enabled')) {
+            return false;
+        }
+
         return auth()->user()?->can('transactions.transfer') ?? false;
     }
 
