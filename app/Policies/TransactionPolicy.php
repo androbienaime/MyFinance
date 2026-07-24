@@ -68,4 +68,9 @@ class TransactionPolicy
         // de tout le systeme.
         return $user->isHeadOffice();
     }
+
+    public function createTransfer(User $user): bool
+    {
+        return $user->can('transactions.transfer');
+    }
 }

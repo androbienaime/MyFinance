@@ -2,6 +2,7 @@
 
 namespace App\Models\Core;
 
+use App\Enums\TransactionDirection;
 use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,21 +14,28 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Transaction extends Model
 {
-        use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'account_id',
         'code',
         'amount',
         'employee_id',
+        'initiated_by_customer_id',
         'type',
         'status',
+        'transfer_group_id',
+        'direction',
+        'counterparty_account_id',
+        'deleted_by',
+        'deletion_reason',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'type' => TransactionType::class,
         'status' => TransactionStatus::class,
+        'direction' => TransactionDirection::class,
     ];
 
     public function approvals(): HasMany
@@ -40,9 +48,19 @@ class Transaction extends Model
         return $this->belongsTo(Employee::class);
     }
 
+    public function initiatedByCustomer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'initiated_by_customer_id');
+    }
+
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    public function counterpartyAccount(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'counterparty_account_id');
     }
 
     public function tagsPayments(): HasMany
@@ -88,5 +106,51 @@ class Transaction extends Model
             ])
             ->groupBy('transaction_date')
             ->orderByDesc('transaction_date');
+    }
+
+    /**
+     * Regroupe une liste de nombres (tags) en intervalles consecutifs.
+     * Exemple : [1,2,3,4,5,6,7] -> ['1-7']
+     *           [16,15,14,13]   -> ['13-16']
+     *           [1,2,5,6,9]     -> ['1-2', '5-6', '9']
+     */
+    public static function compressTagsToRanges($tags): array
+    {
+        if (blank($tags)) {
+            return [];
+        }
+
+        // Accepte un tableau brut ou une collection/JSON deja decode.
+        $numbers = collect($tags)
+            ->map(fn ($n) => (int) $n)
+            ->unique()
+            ->sort()
+            ->values();
+
+        if ($numbers->isEmpty()) {
+            return [];
+        }
+
+        $ranges = [];
+        $start = $numbers->first();
+        $prev = $start;
+
+        foreach ($numbers->slice(1) as $n) {
+            if ($n === $prev + 1) {
+                // toujours dans la meme suite consecutive
+                $prev = $n;
+                continue;
+            }
+
+            // rupture de la suite : on cloture l'intervalle en cours
+            $ranges[] = $start === $prev ? (string) $start : "{$start}-{$prev}";
+            $start = $n;
+            $prev = $n;
+        }
+
+        // dernier intervalle
+        $ranges[] = $start === $prev ? (string) $start : "{$start}-{$prev}";
+
+        return $ranges;
     }
 }

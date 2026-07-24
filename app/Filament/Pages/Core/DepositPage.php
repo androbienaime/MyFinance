@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Core;
 
 use App\Actions\DepositAction;
+use App\Enums\TransactionType;
 use App\Exceptions\TransactionRejectedException;
 use App\Filament\Pages\Concerns\TransactionsTableTrait;
 use App\Models\Core\Account;
@@ -54,6 +55,18 @@ class DepositPage extends Page implements HasSchemas, HasTable
     public static function getNavigationTitle(): string
     {
         return __('myfinance.deposits');
+    }
+
+    protected function transactionsTableScope($query): void
+    {
+        $query->where('type', TransactionType::Deposit)
+            ->orWhere('type', TransactionType::Withdrawal)
+            ->orWhere('type', TransactionType::AccountSettlement);
+    }
+
+    protected function showTransferColumns(): bool
+    {
+        return false;
     }
 
     public static function canAccess(): bool

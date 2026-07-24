@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Core;
 
 use App\Actions\AccountSettlementAction;
+use App\Enums\TransactionType;
 use App\Exceptions\TransactionRejectedException;
 use App\Filament\Pages\Concerns\TransactionsTableTrait;
 use App\Models\Core\Account;
@@ -50,9 +51,21 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
     }
 
 
+    protected function showTransferColumns(): bool
+    {
+        return false;
+    }
+
     public static function canAccess(): bool
     {
         return auth()->user()?->can('transactions.settlement') ?? false;
+    }
+
+    protected function transactionsTableScope($query): void
+    {
+        $query->where('type', TransactionType::Deposit)
+            ->orWhere('type', TransactionType::Withdrawal)
+            ->orWhere('type', TransactionType::AccountSettlement);
     }
 
     public ?array $data = [];
