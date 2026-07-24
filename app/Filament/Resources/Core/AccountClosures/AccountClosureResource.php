@@ -21,7 +21,7 @@ class AccountClosureResource extends Resource
     protected static ?string $model = AccountClosure::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
-    protected static string|UnitEnum|null $navigationGroup = 'Manage Accounts';
+    protected static string|UnitEnum|null $navigationGroup = 'Manage_Accounts';
     protected static ?int $navigationSort = 3;
 
 

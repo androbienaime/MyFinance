@@ -13,6 +13,7 @@ use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\MenuItem;
+use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -31,6 +32,19 @@ class AdminFinancePanelProvider extends PanelProvider
     
     public function panel(Panel $panel): Panel
     {
+        $groups = [
+            'myfinance.operations',
+            'myfinance.Manage_Accounts',
+            'myfinance.administration',
+            'myfinance.settings',
+            // ... tous les autres, sauf Paramètres
+        ];
+
+        sort($groups); // garde l'alphabétique pour tout le reste si vous préférez
+
+        $groups[] = 'Paramètres'; // toujours ajouté en dernier
+        $groups[] = 'Settings'; // toujours ajouté en dernier
+        $groups[] = 'Paramèt'; // toujours ajouté en dernier
 
         return $panel
             ->default()
@@ -100,6 +114,9 @@ class AdminFinancePanelProvider extends PanelProvider
                 Authenticate::class,
                 RequirePasswordChange::class, // à ajouter dans authMiddleware(), après auth
             ])
+            ->navigationGroups(
+                collect($groups)->map(fn (string $name) => NavigationGroup::make($name))->all()
+            )
             ->databaseNotifications()
             ->databaseNotificationsPolling('30s')
             ->globalSearch(true)

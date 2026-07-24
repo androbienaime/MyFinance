@@ -20,7 +20,7 @@ class PermissionLevelRequirementResource extends Resource
     protected static ?string $model = PermissionLevelRequirement::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
-    protected static string|UnitEnum|null $navigationGroup = 'Sécurité';
+    protected static string|UnitEnum|null $navigationGroup = 'Security';
 
     public static function form(Schema $schema): Schema
     {

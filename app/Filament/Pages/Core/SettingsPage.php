@@ -24,7 +24,7 @@ class SettingsPage extends Page implements HasSchemas
     use InteractsWithSchemas;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
-    protected static string|UnitEnum|null $navigationGroup = 'Settings';
+    protected static string|UnitEnum|null $navigationGroup = 'settings';
     protected static ?string $navigationLabel = 'Parametres';
     protected static ?string $title = 'Parametres systeme';
     protected string $view = 'filament.pages.core.settings-page';

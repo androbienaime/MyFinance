@@ -20,7 +20,7 @@ class P2pTransferRequestResource extends Resource
     protected static ?string $model = P2pTransferRequest::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
-    protected static string|UnitEnum|null $navigationGroup = 'Sécurité';
+    protected static string|UnitEnum|null $navigationGroup = 'Security';
 
     public static function canAccess(): bool
     {

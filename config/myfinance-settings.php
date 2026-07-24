@@ -99,6 +99,10 @@ return [
                 'type' => 'text',
                 'label' => "Fees Account Code",
                 'default' => 'FRAIS-001'
+            ],
+            'financial.fee_for_transfer_in_branch_enabled' => [
+                'type' => 'boolean', 'label' => 'Fee For Transfert in branch Enabled',
+                'default' => true, 'scope' => 'global',
             ]
         ],
     ],

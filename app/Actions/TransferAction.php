@@ -10,6 +10,7 @@ use App\Models\Core\Account;
 use App\Models\Core\ApprovalThreshold;
 use App\Models\Core\Customer;
 use App\Models\Core\Employee;
+use App\Models\Core\P2pTransferFeeTier;
 use App\Models\Core\Transaction;
 use App\Services\TransferNotifier;
 use Illuminate\Support\Facades\DB;
@@ -82,6 +83,8 @@ class TransferAction
                 throw new TransactionRejectedException('Impossible de transferer vers un compte a paiement par cases.');
             }
 
+
+            $feeAmount = setting('financial.fee_for_transfer_in_branch_enabled', default:false) ?  P2pTransferFeeTier::feeFor($amount) : 0;
             $totalDebit = $amount + $feeAmount;
 
             if ($totalDebit > $from->availableBalance()) {
@@ -92,8 +95,9 @@ class TransferAction
 
             $feesAccount = null;
 
+            // au lieu de config | settings
             if ($feeAmount > 0) {
-                $feesAccount = Account::where('code', config('myfinance.fees_account_code'))
+                $feesAccount = Account::where('code', setting('financial.fees_account_code'))
                     ->lockForUpdate()
                     ->first();
 

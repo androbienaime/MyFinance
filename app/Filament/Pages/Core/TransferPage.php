@@ -7,6 +7,7 @@ use App\Enums\TransactionType;
 use App\Exceptions\TransactionRejectedException;
 use App\Filament\Pages\Concerns\TransactionsTableTrait;
 use App\Models\Core\Account;
+use App\Models\Core\P2pTransferFeeTier;
 use App\Models\Core\Transaction;
 use BackedEnum;
 use Filament\Forms\Components\TextInput;
@@ -14,6 +15,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
@@ -109,8 +111,23 @@ class TransferPage extends Page implements HasSchemas, HasTable
                         ->numeric()
                         ->minValue(1)
                         ->required()
+                        ->live(onBlur: 600)
+                        ->afterStateUpdated(function ($state, Set $set){
+                            $set("fee_amount", P2pTransferFeeTier::feeFor($state));
+                        })
                         ->prefix('HTG')
                         ->columnSpanFull(),
+                    TextInput::make('fee_amount')
+                        ->label('Fee Amount')
+                        ->disabled()
+                        ->dehydrated()
+                        ->numeric()
+                        ->minValue(1)
+                        ->required()
+                        ->visible(setting('financial.fee_for_transfer_in_branch_enabled', default:false))
+                        ->prefix('HTG')
+                        ->columnSpanFull()
+
                 ]),
         ])->statePath('data');
     }
