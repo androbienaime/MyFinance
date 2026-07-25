@@ -22,7 +22,7 @@ class AccountResource extends Resource
     protected static ?string $model = Account::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserCircle;
-    protected static string|UnitEnum|null $navigationGroup = 'Manage Accounts';
+    protected static string|UnitEnum|null $navigationGroup = 'Manage_Accounts';
 
 
     public static function getNavigationLabel(): string

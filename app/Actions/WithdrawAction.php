@@ -17,7 +17,7 @@ class WithdrawAction
     {
         return DB::transaction(function () use ($accountCode, $amount, $employee) {
             $account = Account::where('code', $accountCode)->lockForUpdate()->firstOrFail();
-            
+
             if (! $account->is_active) {
                 throw new TransactionRejectedException('Ce compte a ete desactive.');
             }
@@ -26,19 +26,13 @@ class WithdrawAction
                 throw new TransactionRejectedException('Le montant doit etre superieur a 0.');
             }
 
-            if($account->typeOfAccount->active_case_payments === true){
+            if ($account->typeOfAccount->active_case_payments === true) {
                 throw new TransactionRejectedException('Vous ne pouvez pas faire de retrait sur ce type compte.');
             }
 
-            $pendingWithdrawals = Transaction::query()
-                ->where('account_id', $account->id)
-                ->where('type', TransactionType::Withdrawal->value)
-                ->where('status', TransactionStatus::Pending->value)
-                ->sum('amount');
-
-            $available = $account->balance - $pendingWithdrawals;
-
-            if ($amount > $available) {
+            // Inclut desormais les retraits ET les transferts sortants en
+            // attente - voir Account::availableBalance().
+            if ($amount > $account->availableBalance()) {
                 throw new TransactionRejectedException('Solde disponible insuffisant.');
             }
 
@@ -62,4 +56,3 @@ class WithdrawAction
         });
     }
 }
-

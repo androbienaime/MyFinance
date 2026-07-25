@@ -28,6 +28,10 @@ return [
     "account_code" => "Code du Compte",
     "current_balance" => "Balance Actuelle",
     "new_deposit" => "Nouveau Dépot",
-    "people_associated" => "Personnes associées"
+    "people_associated" => "Personnes associées",
+
+    "transfer" => "Transfert",
+    "settings" => "Paramètres"
+
     
 ];

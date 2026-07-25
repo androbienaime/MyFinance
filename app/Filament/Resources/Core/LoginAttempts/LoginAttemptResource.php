@@ -22,7 +22,7 @@ class LoginAttemptResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::UserMinus;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Sécurité';
+    protected static string|UnitEnum|null $navigationGroup = 'Security';
 
     protected static ?string $navigationLabel = 'Login Attempt';
 
