@@ -1,20 +1,14 @@
 <?php
 
-// app/Services/LoginAuditService.php
 namespace App\Services;
 
 use App\Models\Core\LoginAttempt;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Notification;
 use Carbon\Carbon;
 
 class LoginAuditService
 {
-    protected const MAX_ATTEMPTS_SOFT = 5;   // -> lock 1 min
-    protected const MAX_ATTEMPTS_HARD = 10;  // -> lock 15 min
-    protected const MAX_ATTEMPTS_CRITICAL = 15; // -> lock manuel admin
-
     public function record(string $email, string $status, ?string $reason = null, ?User $user = null): LoginAttempt
     {
         $attempt = LoginAttempt::create([
@@ -52,10 +46,17 @@ class LoginAuditService
         $lockout = DB::table('account_lockouts')->where('email', $email)->first();
         $count = $lockout->failed_count ?? 1;
 
+        $softThreshold = (int) setting('security.max_login_attempts_soft');
+        $hardThreshold = (int) setting('security.max_login_attempts_hard');
+        $criticalThreshold = (int) setting('security.max_login_attempts_critical');
+
+        $softMinutes = (int) setting('security.lockout_duration_soft_minutes');
+        $hardMinutes = (int) setting('security.lockout_duration_hard_minutes');
+
         $lockUntil = match (true) {
-            $count >= self::MAX_ATTEMPTS_CRITICAL => now()->addYears(100), // verrouillage manuel
-            $count >= self::MAX_ATTEMPTS_HARD => now()->addMinutes(15),
-            $count >= self::MAX_ATTEMPTS_SOFT => now()->addMinute(),
+            $count >= $criticalThreshold => now()->addYears(100), // verrouillage manuel
+            $count >= $hardThreshold => now()->addMinutes($hardMinutes),
+            $count >= $softThreshold => now()->addMinutes($softMinutes),
             default => null,
         };
 
@@ -65,8 +66,8 @@ class LoginAuditService
                 ->update(['locked_until' => $lockUntil]);
         }
 
-        if ($count === self::MAX_ATTEMPTS_CRITICAL) {
-            $this->alertAdmins($email, 'Compte verrouillé après 15 échecs — intervention requise.');
+        if ($count === $criticalThreshold) {
+            $this->alertAdmins($email, 'Compte verrouillé après ' . $criticalThreshold . ' échecs — intervention requise.');
         }
     }
 
@@ -96,7 +97,6 @@ class LoginAuditService
     {
         if (!$user) return;
 
-        // Échecs suivis d'un succès = pattern brute-force réussi potentiel
         $recentFailures = LoginAttempt::where('email', $email)
             ->where('status', '!=', 'success')
             ->where('attempted_at', '>=', now()->subMinutes(30))
@@ -106,7 +106,6 @@ class LoginAuditService
             $this->alertAdmins($email, "Connexion réussie après {$recentFailures} échecs récents — possible compromission.");
         }
 
-        // Nouvelle IP jamais vue pour ce compte
         $knownIp = LoginAttempt::where('user_id', $user->id)
             ->where('status', 'success')
             ->where('ip_address', request()->ip())
@@ -120,8 +119,6 @@ class LoginAuditService
 
     protected function alertAdmins(string $email, string $message): void
     {
-        // Adapte à ta notification interne (Filament Notification, email, etc.)
         \Illuminate\Support\Facades\Log::channel('security')->warning($message, ['email' => $email]);
-        // Notification::send($admins, new SuspiciousLoginNotification($email, $message));
     }
 }

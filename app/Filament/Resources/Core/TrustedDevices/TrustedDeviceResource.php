@@ -17,7 +17,7 @@ class TrustedDeviceResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-device-phone-mobile';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Sécurité';
+    protected static string|UnitEnum|null $navigationGroup = 'Security';
 
     protected static ?string $navigationLabel = 'Appareils connus';
 

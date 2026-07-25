@@ -13,20 +13,39 @@ use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\MenuItem;
+use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminFinancePanelProvider extends PanelProvider
 {
+    
     public function panel(Panel $panel): Panel
     {
+        $groups = [
+            'myfinance.operations',
+            'myfinance.Manage_Accounts',
+            'myfinance.administration',
+            'myfinance.settings',
+            // ... tous les autres, sauf Paramètres
+        ];
+
+        sort($groups); // garde l'alphabétique pour tout le reste si vous préférez
+
+        $groups[] = 'Paramètres'; // toujours ajouté en dernier
+        $groups[] = 'Settings'; // toujours ajouté en dernier
+        $groups[] = 'Paramèt'; // toujours ajouté en dernier
+
         return $panel
             ->default()
             ->id('adminFinance')
@@ -68,7 +87,7 @@ class AdminFinancePanelProvider extends PanelProvider
             ->multiFactorAuthentication([
                 AppAuthentication::make()
                     ->recoverable(), // génère des codes de secours en cas de perte du téléphone
-            ], isRequired: false)
+            ], isRequired: setting('security.2fa_required_for_employees') ?? false)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
@@ -95,6 +114,9 @@ class AdminFinancePanelProvider extends PanelProvider
                 Authenticate::class,
                 RequirePasswordChange::class, // à ajouter dans authMiddleware(), après auth
             ])
+            ->navigationGroups(
+                collect($groups)->map(fn (string $name) => NavigationGroup::make($name))->all()
+            )
             ->databaseNotifications()
             ->databaseNotificationsPolling('30s')
             ->globalSearch(true)

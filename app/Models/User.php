@@ -131,5 +131,11 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
 
         return $this->getAllPermissions()->pluck('id');
     }
+
+    public function requiresTwoFactor(): bool
+    {
+        return setting('security.2fa_required_for_employees')
+            && in_array($this->role_id, setting('security.2fa_required_roles') ?? []);
+    }
     
 }

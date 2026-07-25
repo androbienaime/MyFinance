@@ -4,9 +4,11 @@ namespace App\Filament\Pages\Concerns;
 
 use App\Actions\ApproveTransactionAction;
 use App\Actions\DeleteTransactionAction;
+use App\Enums\TransactionDirection;
 use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
 use App\Exceptions\TransactionRejectedException;
+use App\Filament\Pages\Core\TransferPage;
 use App\Models\Core\Transaction;
 use App\Notifications\TransactionConfirmed;
 use Filament\Actions\Action;
@@ -55,8 +57,49 @@ trait TransactionsTableTrait
                     ->formatStateUsing(fn ($record) => $record->type->label()),
                     // ->color(fn ($record) => $record->type->color()),
 
-                TextColumn::make('amount')->label(__('myfinance.amount'))->money('HTG')->sortable(),
+                TextColumn::make('counterpartyAccount.code')
+                ->label('Compte lie')
+                ->placeholder('—')
+                ->description(fn ($record) => $record?->counterpartyAccount?->customer?->person?->full_name)
+                ->toggleable()
+                ->visible($this->showTransferColumns()),
 
+                TextColumn::make('amount')->label(__('myfinance.amount'))->money('HTG')->sortable(),
+                TextColumn::make('tagsPayments')
+                ->label('Cases')
+                ->badge()
+                ->separator(',')
+                ->getStateUsing(function ($record) {
+                    $numbers = $record->tagsPayments
+                        ->pluck('tags')
+                        ->flatten()
+                        ->filter(fn ($n) => is_numeric($n))
+                        ->map(fn ($n) => (int) $n)
+                        ->unique()
+                        ->values();
+                
+                    return implode(', ', Transaction::compressTagsToRanges($numbers));
+                })
+                ->wrap()
+                ->extraAttributes(['class' => 'min-w-[180px]'])
+                ->color('info')
+                ->visible(!$this->showTransferColumns()),
+
+                TextColumn::make('direction')
+                ->label('Sens')
+                ->badge()
+                ->color(fn (?TransactionDirection $state) => match ($state) {
+                    TransactionDirection::Debit => 'danger',
+                    TransactionDirection::Credit => 'success',
+                    null => 'gray',
+                })
+                ->formatStateUsing(fn (?TransactionDirection $state) => match ($state) {
+                    TransactionDirection::Debit => 'Sortant',
+                    TransactionDirection::Credit => 'Entrant',
+                    null => '—',
+                })
+                ->visible($this->showTransferColumns()),
+                
                 TextColumn::make('status')
                     ->label(__('myfinance.status'))
                     ->badge()
@@ -67,12 +110,23 @@ trait TransactionsTableTrait
                     ->label(__('myfinance.employee'))
                     ->getStateUsing(fn ($record) => $record->employee?->fullName()),
 
+                TextColumn::make('transfer_group_id')
+                    ->label('Groupe de virement')
+                    ->copyable()
+                    ->limit(8) // affiche juste le debut de l'UUID, suffisant pour reperer visuellement le lien entre les 2-4 jambes
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('created_at')->label(__('myfinance.date'))->dateTime('d/m/Y H:i')->sortable(),
             ])
             ->filters([
                 SelectFilter::make('status')
                     ->label(__('myfinance.status'))
                     ->options(collect(TransactionStatus::cases())->mapWithKeys(fn ($s) => [$s->value => $s->label()])),
+            
+                SelectFilter::make('type')
+                ->label('Type de transaction')
+                ->options(collect(TransactionType::cases())->mapWithKeys(fn ($case) => [$case->value => $case->label()])),
             ])
             ->recordActions([
                 Action::make('approve')
@@ -156,6 +210,23 @@ trait TransactionsTableTrait
                         ->sendToDatabase(Auth::user()->employee);
                 })
             ])
+            ->query(function () {
+                $employee = Auth::user()->employee;
+                $query = Transaction::query();
+
+                if ($employee) {
+                    $query->orderByRelevanceTo($employee->branch_id, $employee->id);
+                }
+
+                // Point d'extension : chaque page (TransferPage, DepositPage, ...)
+                // peut restreindre le scope en definissant sa propre methode
+                // transactionsTableScope(). Par defaut aucun filtre supplementaire.
+                if (method_exists($this, 'transactionsTableScope')) {
+                    $this->transactionsTableScope($query);
+                }
+
+                return $query;
+            })
             ->defaultSort('updated_at', 'desc');
     }
 
@@ -167,5 +238,10 @@ trait TransactionsTableTrait
         } catch (TransactionRejectedException $e) {
             Notification::make()->title($e->getMessage())->danger()->send();
         }
+    }
+
+    protected function showTransferColumns(): bool
+    {
+        return true;
     }
 }
