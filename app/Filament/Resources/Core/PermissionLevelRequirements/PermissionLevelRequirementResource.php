@@ -22,6 +22,11 @@ class PermissionLevelRequirementResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
     protected static string|UnitEnum|null $navigationGroup = 'Security';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('myfinance.permission_level_requirements');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return PermissionLevelRequirementForm::configure($schema);

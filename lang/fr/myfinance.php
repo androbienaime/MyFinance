@@ -31,7 +31,14 @@ return [
     "people_associated" => "Personnes associées",
 
     "transfer" => "Transfert",
-    "settings" => "Paramètres"
+    "settings" => "Paramètres",
+    "early_withdrawal_fees" => "Frais de retrait anticipé",
+    "p2p_transfer_fee_tiers" => "Paliers de frais de transfert P2P",
+    "p2p_transfer_limits" => "Limites de transfert P2P",
+    "p2p_transfer_requests" => "Demandes de transfert P2P",
+    "permission_level_requirements" => "Exigences des niveaux d'autorisation",
+    "role_assignment_logs" => "Journaux d'attribution des rôles",
+
 
     
 ];

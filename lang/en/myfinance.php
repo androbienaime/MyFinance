@@ -32,5 +32,11 @@ return [
     "people_associated" => "People associated",
 
     "transfer" => "Transfer",
-    "settings" => "Settings"
+    "settings" => "Settings",
+    "early_withdrawal_fees" => "Early Withdrawal Fees",
+    "p2p_transfer_fee_tiers" => "P2p Transfer Fee Tiers",
+    "p2p_transfer_limits" => "P2p Transfer Limits",
+    "p2p_transfer_requests" => "P2p Transfer Requests",
+    "permission_level_requirements" => "Permission Level Requirements",
+    "role_assignment_logs" => "Role Assignment Logs",
 ];

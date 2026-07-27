@@ -22,6 +22,11 @@ class P2pTransferLimitResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShare;
     protected static string|UnitEnum|null $navigationGroup = 'Administration';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('myfinance.p2p_transfer_limits');
+    }
+
     public static function canAccess(): bool
     {
         return (bool) setting("transactions.transfer_enabled") ?? true;       
