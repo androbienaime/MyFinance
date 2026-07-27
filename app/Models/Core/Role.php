@@ -4,6 +4,7 @@
 namespace App\Models\Core;
 
 use App\Models\User;
+use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Facades\Auth;
@@ -152,5 +153,26 @@ class Role extends SpatieRole
     public function activeUsersCount(): int
     {
         return $this->users()->count();
+    }
+
+
+    public static function resyncSuperAdmin(Command|null $command): void
+    {
+        if($command === null){
+            return;
+        }
+        
+        $superAdmin = Role::where('name', 'super_admin')->first();
+
+        if (! $superAdmin) {
+            $command?->warn('Role super_admin introuvable - resynchronisation ignoree. Lancez myfinance:make-user pour le creer.');
+            return;
+        }
+
+        $superAdmin->syncPermissions(Permission::all());
+
+        $command?->info(
+            'super_admin resynchronise avec la totalite des ' . Permission::count() . ' permissions existantes.'
+        );
     }
 }

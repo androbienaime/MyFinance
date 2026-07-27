@@ -22,6 +22,11 @@ class RoleAssignmentLogResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
     protected static string|UnitEnum|null $navigationGroup = 'Security';
 
+     public static function getNavigationLabel(): string
+    {
+        return __('myfinance.role_assignment_logs');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return RoleAssignmentLogForm::configure($schema);

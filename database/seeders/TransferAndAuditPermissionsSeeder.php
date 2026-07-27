@@ -52,6 +52,13 @@ class TransferAndAuditPermissionsSeeder extends Seeder
         'settings.create' => 90,
         'settings.update' => 90,
         'settings.delete' => 100,
+
+        // EarlyWithdrawal
+        'early_withdrawal_fees.view_any' => 60,
+        'early_withdrawal_fees.view' => 60,
+        'early_withdrawal_fees.create' => 70,
+        'early_withdrawal_fees.update' => 70,
+        'early_withdrawal_fees.delete' => 80,
     ];
 
     public function run(): void

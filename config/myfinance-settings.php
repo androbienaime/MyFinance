@@ -103,7 +103,13 @@ return [
             'financial.fee_for_transfer_in_branch_enabled' => [
                 'type' => 'boolean', 'label' => 'Fee For Transfert in branch Enabled',
                 'default' => true, 'scope' => 'global',
-            ]
+            ],
+            'financial.default_early_withdrawal_fee_percentage' => [
+                'type' => 'decimal',
+                'label' => 'Frais de retrait anticipe par defaut',
+                'default' => 0,
+                'scope' => 'global', // override possible par branche
+            ],
         ],
     ],
 

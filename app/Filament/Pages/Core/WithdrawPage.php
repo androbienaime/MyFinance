@@ -9,6 +9,7 @@ use App\Filament\Pages\Concerns\TransactionsTableTrait;
 use App\Models\Core\Account;
 use App\Models\Core\Transaction;
 use BackedEnum;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -89,6 +90,7 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                             $set('account_active', null);
                             $set('full_name', '');
                             $set('balance', '');
+                            $set('references_people', '');
 
                             // Toujours reset l'erreur avant toute nouvelle recherche
                             $this->resetErrorBag('data.full_name');
@@ -117,9 +119,11 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                             $set('account_active', (bool) $account->is_active);
                             $set('full_name', $account->customer?->person?->full_name ?? 'Client inconnu');
                             $set('balance', (float) $account->balance);
-
+                            
                             $hasOperationToAccount = (bool) ($account->typeOfAccount->active_case_payments ?? false);
                             $set('has_operation_to_account', $hasOperationToAccount);
+
+                            $set('references_people', $account->getAccountInfos());
 
                             if (! $account->is_active) {
                                 Notification::make()
@@ -163,18 +167,27 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                         ->required()
                         ->prefix('HTG')
                         ->columnSpanFull()
-                        // Impossible de saisir un montant sur un compte
-                        // desactive. Pour un compte a cases, le champ reste
-                        // actif : il sert (1) d'affichage en lecture reactive
-                        // du total des cases cochees (mis a jour par Alpine
-                        // via l'evenement navigateur "case-total-updated",
-                        // sans jamais notifier $wire pour ne pas bloquer la
-                        // saisie manuelle), et (2) de champ de saisie du
-                        // montant cible pour le bouton "Generer" ci-dessous.
-                        // Le montant final n'est de toute facon JAMAIS pris
-                        // depuis ce champ pour un compte a cases : voir
-                        // submitTransaction().
-                        ->disabled(fn (Get $get) => $get('account_active') === false),
+                    // Impossible de saisir un montant sur un compte
+                    // desactive. Pour un compte a cases, le champ reste
+                    // actif : il sert (1) d'affichage en lecture reactive
+                    // du total des cases cochees (mis a jour par Alpine
+                    // via l'evenement navigateur "case-total-updated",
+                    // sans jamais notifier $wire pour ne pas bloquer la
+                    // saisie manuelle), et (2) de champ de saisie du
+                    // montant cible pour le bouton "Generer" ci-dessous.
+                    // Le montant final n'est de toute facon JAMAIS pris
+                    // depuis ce champ pour un compte a cases : voir
+                    // submitTransaction().
+                    ->disabled(fn (Get $get) => $get('account_active') === false),
+                    Textarea::make('references_people')
+                    ->label(__("myfinance.people_associated"))
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->formatStateUsing(fn (Get $get) => $get('full_name') ?: '—')
+                    ->hint(fn (Get $get) => $get('account_active') === false ? 'Inactif' : null)
+                    ->hintColor('danger')
+                    ->hintIcon(fn (Get $get) => $get('account_active') === false ? Heroicon::ExclamationTriangle : null)
+                    ->columnSpanFull(),
                 ])
         ])->statePath('data');
     }

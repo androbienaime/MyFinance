@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class Account extends Model implements Deletable
@@ -151,5 +152,91 @@ class Account extends Model implements Deletable
     public function availableBalance(): float
     {
         return (float) $this->balance - $this->pendingDebitsTotal();
+    }
+
+
+    // app/Models/Core/Account.php — ajouts (remplace les deux methodes precedentes)
+    /**
+     * Determine si un reglement de ce compte, MAINTENANT, constitue un
+     * retrait anticipe (donc soumis a frais). Seul signal utilise :
+     * type->duration > 0 - au-dela, la nature du compte (a cases ou a
+     * maturite) dicte COMMENT interpreter cette duree :
+     * - active_case_payments : duration = nombre de cases requises.
+     * - sinon : duration = nombre de mois requis depuis l'ouverture.
+     * duration <= 0 (ou null) => jamais de penalite, peu importe le type.
+     */
+    public function isEarlySettlement(): bool
+    {
+        $type = $this->typeOfAccount;
+        $duration = (int) ($type->duration ?? 0);
+
+        if ($duration <= 0) {
+            return false;
+        }
+
+        // Comparaison sur la date seule, sans les heures : le jour exact de
+        // maturite ne doit jamais compter comme "anticipe", peu importe
+        // l'heure a laquelle le reglement est effectue ce jour-la.
+        $maturityDate = $this->created_at->copy()->startOfDay()->addMonths($duration);
+        $today = now()->startOfDay();
+
+        $maturityNotReached = $today->lt($maturityDate);
+
+        if ((bool) $type->active_case_payments) {
+            $paidCount = $this->tagsPayments()->count();
+            $casesNotFilled = $paidCount < $duration * 30;
+
+            // dd($maturityNotReached);
+            return $casesNotFilled && $maturityNotReached;
+        }
+
+        return $maturityNotReached;
+    }
+
+    public function earlyWithdrawalFeeAmount(): float
+    {
+        if (! $this->isEarlySettlement()) {
+            return 0.0;
+        }
+
+        $percentage = $this->typeOfAccount->earlyWithdrawalFeePercentage();
+
+        return round(((float) $this->balance) * $percentage / 100, 2);
+    }
+
+
+    public function getAccountInfos(){
+        if($this->accountPeople === null){
+            return "Aucune personne n'est associer a ce compte";
+        }
+
+        return $lines = $this->accountPeople
+            ->values()
+            ->map(function ($accountPerson, $index) {
+                $person = $accountPerson->person;
+
+                $document = $person->identityDocuments
+                    ->sortByDesc('is_primary')
+                    ->first();
+
+                $line = ($index + 1) . ". {$person->full_name}";
+
+                if ($document) {
+                    $line .= " - {$document->document_type} : {$document->document_number}";
+                }
+
+                $permissions = implode(', ', $accountPerson->permissions ?? []);
+                $line .= " - {$accountPerson->role} [{$permissions}]";
+
+                // à adapter : quel(s) rôle(s) doivent afficher le %
+                if ($accountPerson->role === 'attorney') {
+                    $line .= " : ({$accountPerson->share_percentage}%)";
+                }
+
+                $line .= " {$accountPerson->end_date}";
+
+                return $line;
+            })
+            ->implode("\n");
     }
 }
