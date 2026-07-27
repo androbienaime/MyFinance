@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Core\AccountClosure;
+use App\Models\Core\EarlyWithdrawalFee;
 use App\Models\Core\Employee;
 use App\Models\Core\LoginAttempt;
 use App\Models\Core\P2pTransferFeeTier;
@@ -11,11 +12,13 @@ use App\Models\Core\P2pTransferRequest;
 use App\Models\Core\PermissionLevelRequirement;
 use App\Models\Core\Person;
 use App\Models\Core\RoleAssignmentLog;
+use App\Models\Core\SystemUpdate;
 use App\Models\Core\Transaction;
 use App\Models\Core\TrustedDevice;
 use App\Observers\EmployeeObserver;
 use App\Observers\TransactionObserver;
 use App\Policies\AccountClosure as PoliciesAccountClosure;
+use App\Policies\EarlyWithdrawalFeePolicy;
 use App\Policies\LoginAttemptPolicy;
 use App\Policies\P2pTransferFeeTierPolicy;
 use App\Policies\P2pTransferLimitPolicy;
@@ -24,6 +27,7 @@ use App\Policies\PermissionLevelRequirementPolicy;
 use App\Policies\PersonPolicy;
 use App\Policies\RoleAssignmentLogPolicy;
 use App\Policies\RolePolicy;
+use App\Policies\SystemUpdatesPolicy;
 use App\Policies\TrustedDevicePolicy;
 use App\Services\SettingsOptionsResolver;
 use BezhanSalleh\LanguageSwitch\LanguageSwitch;
@@ -87,7 +91,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(P2pTransferRequest::class, P2pTransferRequestPolicy::class);
         Gate::policy(PermissionLevelRequirement::class, PermissionLevelRequirementPolicy::class);
         Gate::policy(RoleAssignmentLog::class, RoleAssignmentLogPolicy::class);
+        Gate::policy(EarlyWithdrawalFee::class, EarlyWithdrawalFeePolicy::class);
+        Gate::policy(SystemUpdate::class, SystemUpdatesPolicy::class);
 
+        
         Employee::observe(EmployeeObserver::class);
         Transaction::observe(TransactionObserver::class);
 

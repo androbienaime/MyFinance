@@ -44,7 +44,7 @@ class AdminFinancePanelProvider extends PanelProvider
 
         $groups[] = 'Paramètres'; // toujours ajouté en dernier
         $groups[] = 'Settings'; // toujours ajouté en dernier
-        $groups[] = 'Paramèt'; // toujours ajouté en dernier
+        $groups[] = 'Paramèt'; // toujours ajouté en dernie
 
         return $panel
             ->default()
