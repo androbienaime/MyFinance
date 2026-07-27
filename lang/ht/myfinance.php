@@ -30,6 +30,13 @@ return [
     "new_deposit" => "Nouvo Depo",
     "people_associated" => "Moun ki asosye yo",
     "transfer" => "Transfè",
-    "settings" => "Paramèt"
+    "settings" => "Paramèt",
+    "early_withdrawal_fees" => "Frè Retrè Bonè",
+    "p2p_transfer_fee_tiers" => "Nivo frè transfè P2P",
+    "p2p_transfer_limits" => "Limit transfè P2P",
+    "p2p_transfer_requests" => "Demann transfè P2P",
+    "permission_level_requirements" => "Egzijans pou nivo otorizasyon",
+    "role_assignment_logs" => "Jounal atribisyon wòl yo",
+
 
 ];

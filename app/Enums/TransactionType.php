@@ -11,6 +11,8 @@ enum TransactionType: string
     case AccountRestoration = 'AccountRestoration';
     case Transfer = 'transfer';
     case TransferFee = 'transfer_fee';
+    case SettlementFee = 'settlement_fee';
+
 
 
     public function label(): string
@@ -23,6 +25,7 @@ enum TransactionType: string
             self::AccountRestoration => 'Account Restoration',
             self::Transfer => 'Transfert',
             self::TransferFee => 'Frais de virement',
+            self::SettlementFee => 'Frais de retrait anticipe',
         };
     }
 }

@@ -100,6 +100,7 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
                             $set('full_name', '');
                             $set('balance', '');
                             $set('references_people', '');
+                            $set('fee_amount', '');
 
                             // Toujours reset l'erreur avant toute nouvelle recherche
                             $this->resetErrorBag('data.full_name');
@@ -128,7 +129,8 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
                             $set('account_active', (bool) $account->is_active);
                             $set('full_name', $account->customer?->person?->full_name ?? 'Client inconnu');
                             $set('balance', (float) $account->balance);
-                            $set('references_people', $this->getAccountInfos($account->accountPeople));
+                            $set('references_people', $account->getAccountInfos());
+                            $set('fee_amount', $account->earlyWithdrawalFeeAmount());
 
                             if (! $account->is_active) {
                                 Notification::make()
@@ -182,6 +184,15 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
                         ->dehydrated(false)
                         ->prefix('HTG')
                         ->formatStateUsing(fn (Get $get) => number_format((float) ($get('balance') ?? 0), 2))
+                        ->visible(fn (Get $get) => $get('account_active') ?? false)
+                        ->columnSpanFull(),
+
+                    TextInput::make('fee_amount')
+                        ->label(__("myfinance.fee_amount"))
+                        ->disabled()
+                        ->dehydrated(false)
+                        ->prefix('HTG')
+                        ->formatStateUsing(fn (Get $get) => number_format((float) ($get('fee_amount') ?? 0), 2))
                         ->hint(fn (Get $get) => $get('account_active') === false ? 'Inactif' : null)
                         ->hintColor('danger')
                         ->columnSpanFull(),
@@ -270,39 +281,6 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
     }
 
 
-    public function getAccountInfos(Collection|null $accountPeople){
-        if($accountPeople === null){
-            return "Aucune personne n'est associer a ce compte";
-        }
-
-        return $lines = $accountPeople
-            ->values()
-            ->map(function ($accountPerson, $index) {
-                $person = $accountPerson->person;
-
-                $document = $person->identityDocuments
-                    ->sortByDesc('is_primary')
-                    ->first();
-
-                $line = ($index + 1) . ". {$person->full_name}";
-
-                if ($document) {
-                    $line .= " - {$document->document_type} : {$document->document_number}";
-                }
-
-                $permissions = implode(', ', $accountPerson->permissions ?? []);
-                $line .= " - {$accountPerson->role} [{$permissions}]";
-
-                // à adapter : quel(s) rôle(s) doivent afficher le %
-                if ($accountPerson->role === 'attorney') {
-                    $line .= " : ({$accountPerson->share_percentage}%)";
-                }
-
-                $line .= " {$accountPerson->end_date}";
-
-                return $line;
-            })
-            ->implode("\n");
-    }
+    
 
 }

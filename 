@@ -1,0 +1,53 @@
+[33mde2aebc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdevelop[m[33m)[m Add fee to direct transfer in branch when its  enabled in settings
+[33m2d6793b[m[33m ([m[1;31morigin/develop[m[33m)[m Merge branch 'feature/P2pTransfert' into develop
+[33m043ba22[m Add System Setting
+[33m67cab35[m Add Transfer module and fix Audit
+[33m5d7e868[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m Add table and type for p2p Transfert
+[33m83d4fb7[m Fix Employees Table
+[33mcdabaf7[m Update InstallComand
+[33m21ce4af[m .
+[33mb7ca843[m Fix name(Psr4)
+[33med5aa03[m Fix - change DB_DATABASE in config
+[33m13baa9b[m Fix Sqlite
+[33me1678d8[m Fix Role
+[33m8162eac[m fix - call PermissionLevelRequirementsSeeder in DatabaseSeeder
+[33ma8d4b6d[m Fix Deposit, Withdraw, Settlement access panel
+[33me3c60ce[m fix(roles): enforce role hierarchy and permission-level security across role assignment flow
+[33mc5d628f[m Refactor add Audit and increase the level of security
+[33mab73502[m Fix Withdraw Page
+[33m1c1bc34[m Readme
+[33m50b8c22[m Add Modules WhatsappServices for send automatically messages when atransaction completed
+[33m97745bf[m Fix design and add translation module
+[33m3589e1e[m update style and add notification icon on top bar
+[33me3eb990[m Add Global Widgets into the system
+[33m4cc64c8[m fix MakeEmployee User command
+[33m32ba3be[m add create role super_admin automatically
+[33m4e8eb07[m Fix error ! and change database config to mysql
+[33m88a4d4e[m Fix console command
+[33m0804546[m Fix error ! drop index identity_number first
+[33m777bb0a[m Add nullable on identity_number colonn - customer
+[33ma684c96[m Fix MakeEmployeeUserCommand
+[33meaa3cff[m Update .env.example
+[33m8ee0084[m Merge branch 'main' of https://github.com/androbienaime/MyFinance
+[33m5375a0b[m Add README files
+[33mfe6c9df[m Add the Installation files using the artisan command
+[33ma1db57e[m Create Policy for a AccountClosure and PersonPolicy
+[33m91a495f[m add delection tracking to transactions and account restoration
+[33m9069343[m Account Settlement module
+[33ma4d516a[m fix ['tags'] error
+[33m931407c[m Fix error style on Deposit and Withdrawal
+[33md3c3143[m Make transfer Logic for employee and prevent update branch(employee) directly
+[33m922200c[m Fix cases
+[33mfb868a0[m Guarded Deletion
+[33m2f3ce7a[m Fix case grid and DepositPage
+[33m0b5e9e0[m Make  filament theme
+[33m44ef801[m Enhance DepositPage
+[33m2a14b1c[m Initial commit
+[33mc287571[m[33m ([m[1;31morigin/master[m[33m)[m Filament Form (Account, Customer)
+[33mfe72a43[m fix model and remove_unused_columns_from_customers_table
+[33m473ae68[m Add Filament Resource
+[33mc5369bb[m Creating system.fullaccess for the headoffice
+[33m991d42c[m Add package spatie-laravel-permission
+[33mac56156[m adding the most critical operation [ApproveTransactionAction]
+[33m5e56702[m Create actions for a different type of transaction[Deposit, Withdraw, etc...] and Exceptions
+[33m2449272[m creation of business logic (Models + migration, Enums, etc.)
