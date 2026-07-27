@@ -19,14 +19,14 @@ class SystemUpdateResource extends Resource
 {
     protected static ?string $model = SystemUpdate::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::InformationCircle;
     protected static string|UnitEnum|null $navigationGroup = 'settings';
 
     public static function getNavigationGroup(): string
     {
         return __('myfinance.settings');
     }
-    
+
     public static function form(Schema $schema): Schema
     {
         return SystemUpdateForm::configure($schema);

@@ -19,7 +19,7 @@ class RoleAssignmentLogResource extends Resource
 {
     protected static ?string $model = RoleAssignmentLog::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::PaperAirplane;
     protected static string|UnitEnum|null $navigationGroup = 'Security';
 
      public static function getNavigationLabel(): string
