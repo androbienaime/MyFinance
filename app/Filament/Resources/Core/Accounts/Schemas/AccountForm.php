@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Core\Accounts\Schemas;
 
 use App\Models\Core\AccountPerson;
+use App\Models\Core\Currency;
 use App\Models\Core\Customer;
 use App\Models\Core\Person;
 use Filament\Forms\Components\Hidden;
@@ -189,6 +190,14 @@ class AccountForm
                         ->collapsible()
                         ->itemLabel(fn (array $state) => Person::find($state['person_id'] ?? null)?->first_name),
                 ]),
+                Select::make('currency_id')
+                ->label('Devise')
+                ->relationship("currency", "name")
+                ->default(fn ()=> Currency::where("iso_code", setting("financial.default_currency", default:'HTG'))->first()->id)
+                ->getOptionLabelFromRecordUsing(
+                    fn ($record) => "{$record->name}"
+                )
+                ->required(),
         ]);
     }
 }

@@ -8,6 +8,7 @@ use App\Enums\TransactionType;
 use App\Exceptions\TransactionRejectedException;
 use App\Models\Core\Account;
 use App\Models\Core\ApprovalThreshold;
+use App\Models\Core\Currency;
 use App\Models\Core\Customer;
 use App\Models\Core\Employee;
 use App\Models\Core\P2pTransferFeeTier;
@@ -20,16 +21,6 @@ class TransferAction
 {
     public function __construct(private TransferNotifier $notifier) {}
 
-    /**
-     * Moteur UNIQUE de virement compte a compte. Utilise a la fois par
-     * le guichet (employe, sans frais, sans OTP - identite deja
-     * verifiee en personne) et par le P2P client (avec frais, appele
-     * uniquement apres confirmation OTP par ConfirmP2pTransferAction).
-     * Aucun autre point du code ne doit deplacer des fonds entre deux
-     * comptes.
-     *
-     * @return Transaction[] Toutes les jambes creees (2 sans frais, 4 avec frais)
-     */
     public function handle(
         string $fromAccountCode,
         string $toAccountCode,
@@ -47,11 +38,8 @@ class TransferAction
         }
 
         return DB::transaction(function () use ($fromAccountCode, $toAccountCode, $amount, $employee, $initiatingCustomer, $feeAmount) {
-            // Verrouille les deux comptes dans un ordre CONSTANT (id
-            // croissant, jamais l'ordre source/destination fourni) pour
-            // eviter un deadlock entre deux transferts inverses simultanes.
             $accounts = Account::whereIn('code', [$fromAccountCode, $toAccountCode])
-                ->with('typeOfAccount', 'customer')
+                ->with('typeOfAccount', 'customer', 'currency')
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get()
@@ -66,7 +54,7 @@ class TransferAction
 
             $from = $accounts->get($fromKey);
             $to   = $accounts->get($toKey);
-            
+
             if (! $from->is_active) {
                 throw new TransactionRejectedException('Le compte source est desactive.');
             }
@@ -83,8 +71,45 @@ class TransferAction
                 throw new TransactionRejectedException('Impossible de transferer vers un compte a paiement par cases.');
             }
 
+            $sourceCurrency = $from->currency;
+            $destinationCurrency = $to->currency;
 
-            $feeAmount = setting('financial.fee_for_transfer_in_branch_enabled', default:false) ?  P2pTransferFeeTier::feeFor($amount) : 0;
+            if (! $sourceCurrency->is_active || ! $destinationCurrency->is_active) {
+                throw new TransactionRejectedException('Devise source ou destinataire desactivee.');
+            }
+
+            $sameCurrency = $sourceCurrency->is($destinationCurrency);
+
+            // Taux fige au moment T - ne jamais recalculer a posteriori
+            // avec le taux courant, sous peine de fausser l'historique
+            // comptable si le taux change entre-temps.
+            $exchangeRateApplied = $sameCurrency ? null : $sourceCurrency->rateTo($destinationCurrency);
+
+            // Montant credite au destinataire, dans SA devise. C'est le
+            // point critique : ne jamais crediter $amount brut si les
+            // devises different, sous peine de crediter le mauvais montant.
+            $destinationAmount = $sameCurrency
+                ? $amount
+                : $sourceCurrency->convertTo($amount, $destinationCurrency);
+
+            // Le bareme de frais (P2pTransferFeeTier) est exprime dans la
+            // devise pivot (par defaut). On convertit le montant transfere
+            // vers cette devise pour trouver le bon palier, puis on
+            // reconvertit le frais resultant dans la devise source (car
+            // c'est le compte source qui est debite des frais).
+            $defaultCurrency = Currency::where("iso_code", setting("financial.default_currency"))->first();
+            $amountInDefaultCurrency = $sourceCurrency->is($defaultCurrency)
+                ? $amount
+                : $sourceCurrency->convertTo($amount, $defaultCurrency);
+
+            $feeAmount = setting('financial.fee_for_transfer_in_branch_enabled', default: false)
+                ? P2pTransferFeeTier::feeFor($amountInDefaultCurrency)
+                : 0;
+
+            if ($feeAmount > 0 && ! $sourceCurrency->is($defaultCurrency)) {
+                $feeAmount = $defaultCurrency->convertTo($feeAmount, $sourceCurrency);
+            }
+
             $totalDebit = $amount + $feeAmount;
 
             if ($totalDebit > $from->availableBalance()) {
@@ -94,16 +119,27 @@ class TransferAction
             }
 
             $feesAccount = null;
+            $feeAmountForFeesAccount = 0.0;
+            $feeExchangeRateApplied = null;
 
-            // au lieu de config | settings
             if ($feeAmount > 0) {
                 $feesAccount = Account::where('code', setting('financial.fees_account_code'))
+                    ->with('currency')
                     ->lockForUpdate()
                     ->first();
 
                 if (! $feesAccount) {
                     throw new TransactionRejectedException('Compte de frais introuvable - contactez un administrateur.');
                 }
+
+                $feesCurrency = $feesAccount->currency;
+                $feeSameCurrency = $sourceCurrency->is($feesCurrency);
+
+                $feeAmountForFeesAccount = $feeSameCurrency
+                    ? $feeAmount
+                    : $sourceCurrency->convertTo($feeAmount, $feesCurrency);
+
+                $feeExchangeRateApplied = $feeSameCurrency ? null : $sourceCurrency->rateTo($feesCurrency);
             }
 
             $requiredLevels = ApprovalThreshold::levelsRequiredFor(TransactionType::Transfer, $amount);
@@ -124,6 +160,8 @@ class TransferAction
                 'direction' => TransactionDirection::Debit,
                 'code' => Transaction::generateUniqueCode(),
                 'amount' => $amount,
+                'currency_id' => $sourceCurrency->id,
+                'exchange_rate_applied' => null, // la jambe debit est toujours dans sa propre devise native
                 'type' => TransactionType::Transfer,
             ]);
 
@@ -132,7 +170,9 @@ class TransferAction
                 'counterparty_account_id' => $from->id,
                 'direction' => TransactionDirection::Credit,
                 'code' => Transaction::generateUniqueCode(),
-                'amount' => $amount,
+                'amount' => $destinationAmount,
+                'currency_id' => $destinationCurrency->id,
+                'exchange_rate_applied' => $exchangeRateApplied,
                 'type' => TransactionType::Transfer,
             ]);
 
@@ -145,6 +185,8 @@ class TransferAction
                     'direction' => TransactionDirection::Debit,
                     'code' => Transaction::generateUniqueCode(),
                     'amount' => $feeAmount,
+                    'currency_id' => $sourceCurrency->id,
+                    'exchange_rate_applied' => null,
                     'type' => TransactionType::TransferFee,
                 ]);
 
@@ -153,15 +195,17 @@ class TransferAction
                     'counterparty_account_id' => $from->id,
                     'direction' => TransactionDirection::Credit,
                     'code' => Transaction::generateUniqueCode(),
-                    'amount' => $feeAmount,
+                    'amount' => $feeAmountForFeesAccount,
+                    'currency_id' => $feesAccount->currency->id,
+                    'exchange_rate_applied' => $feeExchangeRateApplied,
                     'type' => TransactionType::TransferFee,
                 ]);
             }
 
             if ($status === TransactionStatus::Completed) {
                 $from->decrement('balance', $totalDebit);
-                $to->increment('balance', $amount);
-                $feesAccount?->increment('balance', $feeAmount);
+                $to->increment('balance', $destinationAmount); // <- correction: destinationAmount, pas $amount
+                $feesAccount?->increment('balance', $feeAmountForFeesAccount);
 
                 $this->notifier->notifyTransferCompleted($from, $to, $amount, $feeAmount);
             }

@@ -1,25 +1,29 @@
 <?php
 
-namespace App\Filament\Resources\Core\SystemUpdates\Tables;
+namespace App\Filament\Resources\Core\Currencies\Tables;
 
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
 
-class SystemUpdatesTable
+class CurrenciesTable
 {
     public static function configure(Table $table): Table
     {
         return $table
             ->columns([
-                TextColumn::make('update_key')
-                    ->searchable(),
-                TextColumn::make('applied_at')
-                    ->dateTime()
-                    ->sortable(),
+                TextColumn::make("name"),
+                TextColumn::make("iso_code")
+                    ->badge(),
+                TextColumn::make("symbol"),
+                TextColumn::make("exchange_rate")
+                    ->numeric(),
+                ToggleColumn::make('is_active')
+                    ->onColor("success")
+                    ->offColor("danger"),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -34,7 +38,6 @@ class SystemUpdatesTable
             ])
             ->recordActions([
                 EditAction::make(),
-                DeleteAction::make()
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

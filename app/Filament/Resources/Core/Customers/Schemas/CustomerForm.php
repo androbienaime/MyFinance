@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Core\Customers\Schemas;
 
 use App\Models\Core\City;
 use App\Models\Core\Country;
+use App\Models\Core\Currency;
 use App\Models\Core\State;
 use App\Models\Core\TypeOfAccount;
 use Filament\Forms\Components\Repeater;
@@ -168,6 +169,14 @@ class CustomerForm
                             ->searchable()
                             ->required()
                             ->native(false),
+                                                Select::make('currency_id')
+                        ->label('Devise')
+                        ->options(fn () => Currency::all()->pluck('iso_code', 'id'))
+                        ->default(fn ()=> Currency::where("iso_code", setting("financial.default_currency", default:'HTG'))->first()->id)
+                        ->getOptionLabelFromRecordUsing(
+                            fn ($record) => "{$record->name}"
+                        )
+                        ->required(),
                         Section::make('Personnes associees au compte')
                             ->description('Ajoute les personnes qui auront un role sur ce compte, en plus du titulaire principal.')
                             ->schema([
@@ -208,14 +217,6 @@ class CustomerForm
                                     ->itemLabel(fn (array $state): ?string => $state['first_name'] ?? null),
                             ])
                             ->visible(fn (string $operation) => $operation === 'create'),
-
-                        // TextInput::make('initial_balance')
-                        //     ->label('Depot initial')
-                        //     ->numeric()
-                        //     ->default(0)
-                        //     ->minValue(0)
-                        //     ->required()
-                        //     ->visible(false),
                     ])
                     // Uniquement a la creation - on ne veut pas permettre de
                     // recreer un compte depuis le formulaire d'edition du client.

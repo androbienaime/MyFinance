@@ -7,6 +7,7 @@ use App\Enums\TransactionType;
 use App\Exceptions\TransactionRejectedException;
 use App\Filament\Pages\Concerns\TransactionsTableTrait;
 use App\Models\Core\Account;
+use App\Models\Core\Currency;
 use App\Models\Core\Transaction;
 use BackedEnum;
 use Filament\Actions\Action as ActionsAction;
@@ -59,11 +60,13 @@ class DepositPage extends Page implements HasSchemas, HasTable
 
     protected function transactionsTableScope($query): void
     {
-        $query->where('type', TransactionType::Deposit)
-            ->orWhere('type', TransactionType::Withdrawal)
-            ->orWhere('type', TransactionType::AccountSettlement);
+        $query->whereIn('type', [
+            TransactionType::Deposit,
+            TransactionType::Withdrawal,
+            TransactionType::AccountSettlement,
+        ]);
     }
-
+    
     protected function showTransferColumns(): bool
     {
         return false;
@@ -105,7 +108,7 @@ class DepositPage extends Page implements HasSchemas, HasTable
                             $set('account_active', null);
                             $set('full_name', '');
                             $set('balance', '');
-
+                            $set('prefix_field', setting("financial.default_currency", default:'HTG'));
                             // Toujours reset l'erreur avant toute nouvelle recherche
                             $this->resetErrorBag('data.full_name');
 
@@ -133,7 +136,8 @@ class DepositPage extends Page implements HasSchemas, HasTable
                             $set('account_active', (bool) $account->is_active);
                             $set('full_name', $account->customer?->person?->full_name ?? 'Client inconnu');
                             $set('balance', (float) $account->balance);
-
+                            $set('prefix_field', $account?->currency?->symbol);
+                        
                             if (! $account->is_active) {
                                 Notification::make()
                                     ->title('Ce compte est desactive.')
@@ -174,7 +178,7 @@ class DepositPage extends Page implements HasSchemas, HasTable
                         ->label(__("myfinance.current_balance"))
                         ->disabled()
                         ->dehydrated(false)
-                        ->prefix('HTG')
+                        ->prefix(fn(callable $get) => $get("prefix_field") ?: Account::where("code", $get("account_code"))?->first()?->currency?->symbol)
                         ->formatStateUsing(fn (Get $get) => number_format((float) ($get('balance') ?? 0), 2))
                         ->hint(fn (Get $get) => $get('account_active') === false ? 'Inactif' : null)
                         ->hintColor('danger')
@@ -185,7 +189,7 @@ class DepositPage extends Page implements HasSchemas, HasTable
                         ->numeric()
                         ->minValue(1)
                         ->required(fn (Get $get) => ! $get('active_case_payments'))
-                        ->prefix('HTG')
+                        ->prefix(fn(callable $get) => $get("prefix_field") ?: Account::where("code", $get("account_code"))?->first()?->currency?->symbol)
                         ->columnSpanFull()
                         ->extraInputAttributes([
                             // Affichage pur JS, jamais notifie a $wire - voir
@@ -227,7 +231,6 @@ class DepositPage extends Page implements HasSchemas, HasTable
                                 }),
                         ),
                     ]),
-
             ViewField::make('tags')
                 ->label('Cases a payer')
                 ->view('filament.forms.components.case-grid')

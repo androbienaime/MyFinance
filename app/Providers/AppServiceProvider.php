@@ -16,6 +16,7 @@ use App\Models\Core\SystemUpdate;
 use App\Models\Core\Transaction;
 use App\Models\Core\TrustedDevice;
 use App\Observers\EmployeeObserver;
+use App\Observers\PermissionObserver;
 use App\Observers\TransactionObserver;
 use App\Policies\AccountClosure as PoliciesAccountClosure;
 use App\Policies\EarlyWithdrawalFeePolicy;
@@ -37,6 +38,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class AppServiceProvider extends ServiceProvider
@@ -97,8 +99,7 @@ class AppServiceProvider extends ServiceProvider
         
         Employee::observe(EmployeeObserver::class);
         Transaction::observe(TransactionObserver::class);
-
-
+        Permission::observe(PermissionObserver::class);
 
 
     }

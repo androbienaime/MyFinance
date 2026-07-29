@@ -43,6 +43,7 @@ class WithdrawAction
                 'account_id' => $account->id,
                 'code' => Transaction::generateUniqueCode(),
                 'amount' => $amount,
+                'currency_id'=> $account?->currency?->id,
                 'employee_id' => $employee->id,
                 'type' => TransactionType::Withdrawal,
                 'status' => $status,

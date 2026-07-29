@@ -24,6 +24,7 @@ class Account extends Model implements Deletable
         'code',
         'type_of_account_id',
         'customer_id',
+        'currency_id',
         'balance',
         'is_active',
         'employee_id',
@@ -51,6 +52,11 @@ class Account extends Model implements Deletable
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function currency(): BelongsTo
+    {
+        return $this->belongsTo(Currency::class);
     }
 
     public function people() : BelongsToMany

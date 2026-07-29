@@ -7,8 +7,8 @@ use App\Enums\TransactionType;
 use App\Exceptions\TransactionRejectedException;
 use App\Filament\Pages\Concerns\TransactionsTableTrait;
 use App\Models\Core\Account;
+use App\Models\Core\Currency;
 use App\Models\Core\P2pTransferFeeTier;
-use App\Models\Core\Transaction;
 use BackedEnum;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -38,6 +38,9 @@ class TransferPage extends Page implements HasSchemas, HasTable
     protected static ?string $title = 'Virements';
     protected string $view = 'filament.pages.core.transfer-page';
 
+    /** Cache local pour eviter de re-interroger la DB a chaque render Livewire. */
+    private array $accountCache = [];
+
     public static function getNavigationLabel(): string
     {
         return __('myfinance.transfer');
@@ -61,11 +64,28 @@ class TransferPage extends Page implements HasSchemas, HasTable
     {
         $query->where('type', TransactionType::Transfer);
     }
+
     public ?array $data = [];
 
     public function mount(): void
     {
         $this->form->fill();
+    }
+
+    /**
+     * Point d'entree unique de resolution de compte, avec cache memoire
+     * pour la duree de vie de l'instance (evite les requetes dupliquees
+     * entre hydrateAccountPreview, le calcul de frais et les prefixes).
+     */
+    private function resolveAccount(?string $code): ?Account
+    {
+        if (blank($code)) {
+            return null;
+        }
+
+        return $this->accountCache[$code] ??= Account::where('code', $code)
+            ->with(['customer.person', 'currency'])
+            ->first();
     }
 
     public function form(Schema $schema): Schema
@@ -78,7 +98,7 @@ class TransferPage extends Page implements HasSchemas, HasTable
                         ->label('Compte source')
                         ->required()
                         ->live(debounce: 600)
-                        ->afterStateUpdated(fn ($state, callable $set) => $this->hydrateAccountPreview($state, $set, 'from')),
+                        ->afterStateUpdated(fn ($state, callable $set, Get $get) => $this->hydrateAccountPreview($state, $set, $get, 'from')),
 
                     TextInput::make('from_full_name')
                         ->label('Titulaire source')
@@ -90,7 +110,7 @@ class TransferPage extends Page implements HasSchemas, HasTable
                         ->label('Solde disponible')
                         ->disabled()
                         ->dehydrated(false)
-                        ->prefix('HTG')
+                        ->prefix(fn (Get $get) => $get('prefix_field_from') ?: '')
                         ->columnSpanFull()
                         ->formatStateUsing(fn (Get $get) => number_format((float) ($get('from_balance') ?? 0), 2)),
 
@@ -98,7 +118,7 @@ class TransferPage extends Page implements HasSchemas, HasTable
                         ->label('Compte destinataire')
                         ->required()
                         ->live(debounce: 600)
-                        ->afterStateUpdated(fn ($state, callable $set) => $this->hydrateAccountPreview($state, $set, 'to')),
+                        ->afterStateUpdated(fn ($state, callable $set, Get $get) => $this->hydrateAccountPreview($state, $set, $get, 'to')),
 
                     TextInput::make('to_full_name')
                         ->label('Titulaire destinataire')
@@ -112,48 +132,123 @@ class TransferPage extends Page implements HasSchemas, HasTable
                         ->minValue(1)
                         ->required()
                         ->live(onBlur: 600)
-                        ->afterStateUpdated(function ($state, Set $set){
-                            $set("fee_amount", P2pTransferFeeTier::feeFor($state));
-                        })
-                        ->prefix('HTG')
+                        ->afterStateUpdated(fn ($state, Set $set, Get $get) => $this->recomputeAmountDerivedFields((float) $state, $set, $get))
+                        ->prefix(fn (Get $get) => $get('prefix_field_from') ?: '')
                         ->columnSpanFull(),
+
+                    TextInput::make('converted_amount')
+                        ->label('Montant recu par le destinataire')
+                        ->disabled()
+                        ->dehydrated(false)
+                        ->visible(fn (Get $get) => filled($get('converted_amount')))
+                        ->prefix(fn (Get $get) => $get('prefix_field_to') ?: '')
+                        ->columnSpanFull(),
+
                     TextInput::make('fee_amount')
-                        ->label('Fee Amount')
+                        ->label('Frais')
                         ->disabled()
                         ->dehydrated()
                         ->numeric()
                         ->minValue(1)
                         ->required()
-                        ->visible(setting('financial.fee_for_transfer_in_branch_enabled', default:false))
-                        ->prefix('HTG')
-                        ->columnSpanFull()
-
+                        ->visible(setting('financial.fee_for_transfer_in_branch_enabled', default: false))
+                        ->prefix(fn (Get $get) => $get('prefix_field_from') ?: '')
+                        ->hint(fn (Get $get) => $get('fee_hint') ?: null)
+                        ->columnSpanFull(),
                 ]),
         ])->statePath('data');
     }
 
-    private function hydrateAccountPreview($code, callable $set, string $prefix): void
+    private function hydrateAccountPreview(?string $code, callable $set, Get $get, string $prefix): void
     {
         $set("{$prefix}_full_name", '');
         $set("{$prefix}_balance", '');
+        $set("prefix_field_{$prefix}", '');
+        $set('fee_hint', ''); // ajoute ici, avant le early-return si compte introuvable
 
-        if (blank($code)) {
-            return;
-        }
-
-        $account = Account::where('code', $code)->with('customer.person')->first();
+        $account = $this->resolveAccount($code);
 
         if (! $account) {
+            if ($prefix === 'to') {
+                $set('converted_amount', '');
+            }
             return;
         }
 
         $set("{$prefix}_full_name", $account->customer?->person?->full_name ?? 'Client inconnu');
+        $set("prefix_field_{$prefix}", $account->currency?->symbol ?? '');
 
         if ($prefix === 'from') {
             $set('from_balance', (float) $account->availableBalance());
         }
+
+        // Un changement de compte (source ou destination) invalide
+        // l'apercu de conversion precedent - on le recalcule si un
+        // montant est deja saisi.
+        $amount = (float) ($get('amount') ?? 0);
+        if ($amount > 0) {
+            $this->recomputeAmountDerivedFields($amount, $set, $get);
+        }
     }
 
+    private function recomputeAmountDerivedFields(float $amount, Set $set, Get $get): void
+    {
+        $from = $this->resolveAccount($get('from_account_code'));
+        $to = $this->resolveAccount($get('to_account_code'));
+
+        if (! $from || $amount <= 0) {
+            $set('fee_amount', 0);
+            $set('fee_hint', '');
+            $set('converted_amount', '');
+            return;
+        }
+
+        $sourceCurrency = $from->currency;
+        $defaultCurrency = Currency::default();
+        $sourceIsDefault = $sourceCurrency->is($defaultCurrency);
+
+        $amountInDefaultCurrency = $sourceIsDefault
+            ? $amount
+            : $sourceCurrency->convertTo($amount, $defaultCurrency);
+
+        $feeEnabled = setting('financial.fee_for_transfer_in_branch_enabled', default: false);
+
+        if (! $feeEnabled) {
+            $set('fee_amount', 0);
+            $set('fee_hint', '');
+        } else {
+            $feeInDefaultCurrency = P2pTransferFeeTier::feeFor($amountInDefaultCurrency);
+
+            $feeInSourceCurrency = $sourceIsDefault
+                ? $feeInDefaultCurrency
+                : $defaultCurrency->convertTo($feeInDefaultCurrency, $sourceCurrency);
+
+            $set('fee_amount', $feeInSourceCurrency);
+
+            // Hint uniquement si la devise source differe de la devise par
+            // defaut - sinon l'info serait redondante avec le champ lui-meme.
+            $set('fee_hint', $sourceIsDefault
+                ? ''
+                : sprintf(
+                    '≈ %s (tarif calcule sur cette base, taux: 1 %s = %s %s)',
+                    $defaultCurrency->format($feeInDefaultCurrency),
+                    $sourceCurrency->code,
+                    number_format($sourceCurrency->rateTo($defaultCurrency), 4),
+                    $defaultCurrency->code,
+                ));
+        }
+
+        if (! $to) {
+            $set('converted_amount', '');
+            return;
+        }
+
+        $destinationCurrency = $to->currency;
+
+        $set('converted_amount', $sourceCurrency->is($destinationCurrency)
+            ? ''
+            : number_format($sourceCurrency->convertTo($amount, $destinationCurrency), $destinationCurrency->decimal_places));
+    }
     public function submitTransaction(): void
     {
         $state = $this->form->getState();
@@ -179,6 +274,7 @@ class TransferPage extends Page implements HasSchemas, HasTable
 
             Notification::make()->title('Virement enregistre.')->success()->send();
 
+            $this->accountCache = [];
             $this->form->fill();
             $this->resetTable();
         } catch (TransactionRejectedException $e) {
