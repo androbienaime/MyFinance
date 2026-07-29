@@ -22,6 +22,10 @@ class MyFinanceUpdate extends Command
             Artisan::call('migrate', ['--force' => true]) === 0
         );
 
+        $this->components->task('Custom Seeder', fn () => 
+            $this->call('db:seed', ['--class' => \Database\Seeders\CustomSeeder::class, '--force' => true]) === 0
+        );
+
         $this->components->task('Rôles & permissions', fn () => 
             $this->call('db:seed', ['--class' => \Database\Seeders\RolePermissionSeeder::class, '--force' => true]) === 0
         );

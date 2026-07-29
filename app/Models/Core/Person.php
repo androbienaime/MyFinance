@@ -6,6 +6,7 @@ use App\Contracts\Deletable;
 use App\Models\Concerns\HasDeletionGuard;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Person extends Model implements Deletable
 {
@@ -59,6 +60,10 @@ class Person extends Model implements Deletable
         return $this->hasMany(AccountPerson::class);
     }
 
+    public function customer(): HasOne
+    {
+        return $this->hasOne(Customer::class);
+    }
 
     public function canBeDeleted(): bool
     {

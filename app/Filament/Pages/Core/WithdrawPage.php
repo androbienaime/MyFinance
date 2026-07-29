@@ -63,9 +63,11 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
 
     protected function transactionsTableScope($query): void
     {
-        $query->where('type', TransactionType::Deposit)
-            ->orWhere('type', TransactionType::Withdrawal)
-            ->orWhere('type', TransactionType::AccountSettlement);
+        $query->whereIn('type', [
+            TransactionType::Deposit,
+            TransactionType::Withdrawal,
+            TransactionType::AccountSettlement,
+        ]);
     }
 
     public ?array $data = [];
@@ -91,6 +93,7 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                             $set('full_name', '');
                             $set('balance', '');
                             $set('references_people', '');
+                            $set('prefix_field', setting("financial.default_currency", default:'HTG'));
 
                             // Toujours reset l'erreur avant toute nouvelle recherche
                             $this->resetErrorBag('data.full_name');
@@ -119,7 +122,8 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                             $set('account_active', (bool) $account->is_active);
                             $set('full_name', $account->customer?->person?->full_name ?? 'Client inconnu');
                             $set('balance', (float) $account->balance);
-                            
+                            $set('prefix_field', $account?->currency?->symbol);
+
                             $hasOperationToAccount = (bool) ($account->typeOfAccount->active_case_payments ?? false);
                             $set('has_operation_to_account', $hasOperationToAccount);
 
@@ -154,7 +158,7 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                         ->label(__('myfinance.current_balance'))
                         ->disabled()
                         ->dehydrated(false)
-                        ->prefix('HTG')
+                        ->prefix(fn(callable $get) => $get("prefix_field") ?: Account::where("code", $get("account_code"))?->first()?->currency?->symbol)
                         ->formatStateUsing(fn (Get $get) => number_format((float) ($get('balance') ?? 0), 2))
                         ->hint(fn (Get $get) => $get('account_active') === false ? 'Inactif' : null)
                         ->hintColor('danger')
@@ -165,7 +169,7 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                         ->numeric()
                         ->minValue(1)
                         ->required()
-                        ->prefix('HTG')
+                        ->prefix(fn(callable $get) => $get("prefix_field") ?: Account::where("code", $get("account_code"))?->first()?->currency?->symbol)
                         ->columnSpanFull()
                     // Impossible de saisir un montant sur un compte
                     // desactive. Pour un compte a cases, le champ reste
