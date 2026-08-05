@@ -39,6 +39,65 @@ return [
     "permission_level_requirements" => "Exigences des niveaux d'autorisation",
     "role_assignment_logs" => "Journaux d'attribution des rôles",
 
+    'reports' => 'Rapports',
+    'report' => 'Rapport',
+    'caisse_sessions' => 'Caisses',
+    'caisse_session' => 'Session de caisse',
 
+    // Types
+    'automatic' => 'Automatique',
+    'manual' => 'Manuel',
+
+    // Categories de rapports
+    'daily_closing' => 'Cloture journaliere',
+    'monthly_summary' => 'Resume mensuel',
+    'incident' => 'Incident',
+    'cash_discrepancy' => 'Ecart de caisse',
+    'customer_complaint' => 'Plainte client',
+    'maintenance' => 'Maintenance',
+    'custom' => 'Autre',
+
+    // Statuts de rapport
+    'pending' => 'En attente',
+    'reviewed' => 'Revu',
+    'archived' => 'Archive',
+
+    // Statuts de caisse
+    'open' => 'Ouverte',
+    'closed' => 'Fermee',
+
+    // Champs
+    'title' => 'Titre',
+    'content' => 'Contenu',
+    'category' => 'Categorie',
+    'period_start' => 'Debut de periode',
+    'period_end' => 'Fin de periode',
+    'reviewer_notes' => 'Notes du reviseur',
+    'reviewed_by' => 'Revu par',
+    'reviewed_at' => 'Revu le',
+    'branch' => 'Succursale',
+    'employee' => 'Employe',
+
+    // Caisse
+    'opening_balance_declared' => 'Solde declare a l\'ouverture',
+    'opening_balance_expected' => 'Solde attendu a l\'ouverture',
+    'closing_balance_declared' => 'Solde declare a la fermeture',
+    'closing_balance_expected' => 'Solde attendu a la fermeture',
+    'opening_discrepancy' => 'Ecart a l\'ouverture',
+    'closing_discrepancy' => 'Ecart a la fermeture',
+    'total_deposits' => 'Total depots (entree)',
+    'total_withdrawals' => 'Total retraits (sortie)',
+    'closing_comment' => 'Commentaire de fermeture',
+
+    // Actions
+    'open_my_caisse' => 'Ouvrir ma caisse',
+    'close_my_caisse' => 'Fermer ma caisse',
+    'force_close' => 'Fermeture forcee',
+    'mark_reviewed' => 'Marquer comme revu',
+    'archive' => 'Archiver',
+    'new_report' => 'Nouveau rapport',
+    'daily_closing_reports' => 'Rapports journaliers',
+    'monthly_summary_reports' => 'Resumes mensuels',
+    'all_reports' => 'Tous les rapports',
     
 ];

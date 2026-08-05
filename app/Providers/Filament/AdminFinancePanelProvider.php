@@ -4,7 +4,10 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\ForcePasswordChange;
 use App\Filament\Pages\Auth\Login;
+use App\Filament\Widgets\AccountsByTypeChart;
+use App\Filament\Widgets\CurrencyFilterTabs;
 use App\Filament\Widgets\GlobalStatsOverview;
+use App\Filament\Widgets\LatestReportsWidget;
 use App\Filament\Widgets\TransactionsChart;
 use App\Http\Middleware\RequirePasswordChange;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
@@ -35,13 +38,14 @@ class AdminFinancePanelProvider extends PanelProvider
         $groups = [
             'myfinance.operations',
             'myfinance.Manage_Accounts',
+            'myfinance.reports',
             'myfinance.administration',
             'myfinance.settings',
-            // ... tous les autres, sauf Paramètres
         ];
 
         sort($groups); // garde l'alphabétique pour tout le reste si vous préférez
-
+        $groups[] = 'Rapports';
+        $groups[] = 'Reports';
         $groups[] = 'Paramètres'; // toujours ajouté en dernier
         $groups[] = 'Settings'; // toujours ajouté en dernier
         $groups[] = 'Paramèt'; // toujours ajouté en dernie
@@ -96,8 +100,11 @@ class AdminFinancePanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
+                CurrencyFilterTabs::class,
                 GlobalStatsOverview::class,
-                TransactionsChart::class
+                LatestReportsWidget::class,
+                TransactionsChart::class,
+                AccountsByTypeChart::class,
             ])
             ->middleware([
                 EncryptCookies::class,

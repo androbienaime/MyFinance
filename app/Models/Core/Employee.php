@@ -86,6 +86,11 @@ class Employee extends Model implements Deletable
         return $this->hasMany(Transaction::class);
     }
 
+    public function caisseSessions(): HasMany
+    {
+        return $this->hasMany(CaisseSession::class);
+    }
+    
     public function identityDocuments()
     {
         return $this->morphMany(IdentityDocument::class, 'identity_documentable');

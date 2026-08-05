@@ -54,6 +54,11 @@ class Account extends Model implements Deletable
         return $this->belongsTo(Customer::class);
     }
 
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class);
+    }
+    
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class);
