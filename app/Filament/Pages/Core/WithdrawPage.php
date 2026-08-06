@@ -93,6 +93,7 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                             $set('full_name', '');
                             $set('balance', '');
                             $set('references_people', '');
+                            $set('total_amount_hint', '');
                             $set('prefix_field', setting("financial.default_currency", default:'HTG'));
 
                             // Toujours reset l'erreur avant toute nouvelle recherche
@@ -158,7 +159,11 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                         ->label(__('myfinance.current_balance'))
                         ->disabled()
                         ->dehydrated(false)
-                        ->prefix(fn(callable $get) => $get("prefix_field") ?: Account::where("code", $get("account_code"))?->first()?->currency?->symbol)
+                        // prefix_field est deja rempli (et reset) dans
+                        // afterStateUpdated de account_code - plus besoin de
+                        // fallback qui refaisait une requete Account a chaque
+                        // repaint reactif du champ.
+                        ->prefix(fn (Get $get) => $get('prefix_field'))
                         ->formatStateUsing(fn (Get $get) => number_format((float) ($get('balance') ?? 0), 2))
                         ->hint(fn (Get $get) => $get('account_active') === false ? 'Inactif' : null)
                         ->hintColor('danger')
@@ -169,7 +174,13 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                         ->numeric()
                         ->minValue(1)
                         ->required()
-                        ->prefix(fn(callable $get) => $get("prefix_field") ?: Account::where("code", $get("account_code"))?->first()?->currency?->symbol)
+                        ->live(onBlur: true)
+                        // Idem : plus de requete Account de secours, prefix_field
+                        // est deja disponible en state.
+                        ->prefix(fn (Get $get) => $get('prefix_field'))
+                        ->hint(fn (Get $get) => $get('account_active') === false
+                            ? 'Inactif'
+                            : ($get('total_amount_hint') ?: null))
                         ->columnSpanFull()
                     // Impossible de saisir un montant sur un compte
                     // desactive. Pour un compte a cases, le champ reste
@@ -182,7 +193,14 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
                     // Le montant final n'est de toute facon JAMAIS pris
                     // depuis ce champ pour un compte a cases : voir
                     // submitTransaction().
-                    ->disabled(fn (Get $get) => $get('account_active') === false),
+                    ->disabled(fn (Get $get) => $get('account_active') === false)
+                    // Recalcule le solde futur apres retrait a partir du
+                    // balance deja present en state - aucune requete DB.
+                    ->afterStateUpdated(function ($state, callable $set, Get $get) {
+                        $balance = (float) ($get('balance') ?? 0);
+                        $amount = (float) ($state ?? 0);
+                        $set('total_amount_hint', $this->computeTotalAmountHint($balance, $amount));
+                    }),
                     Textarea::make('references_people')
                     ->label(__("myfinance.people_associated"))
                     ->disabled()
@@ -212,7 +230,7 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
         }
 
         try {
-            $transaction = app(WithdrawAction::class)->handle($state['account_code'], (float) $state['amount'], $employee);
+            $transaction = app(WithdrawAction::class)->handle($state['account_code'], (float) ($state['amount'] ?? 0), $employee);
 
             Notification::make()->title("Retrait {$transaction->code} enregistre.")->success()->send();
 
@@ -221,5 +239,16 @@ class WithdrawPage extends Page implements HasSchemas, HasTable
         } catch (TransactionRejectedException $e) {
             Notification::make()->title($e->getMessage())->danger()->send();
         }
+    }
+
+    // Calcule le solde futur affiche en hint sous le champ Montant (apres
+    // retrait), a partir du balance deja charge en state - aucune requete
+    // DB, uniquement du calcul en memoire.
+    private function computeTotalAmountHint(float $balance, float $amount): string
+    {
+        return sprintf(
+            'Future Balance : %s',
+            number_format($balance - $amount, 2)
+        );
     }
 }

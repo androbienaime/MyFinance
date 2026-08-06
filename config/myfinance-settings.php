@@ -113,6 +113,22 @@ return [
         ],
     ],
 
+    'accounts' => [
+        'label' => 'Comptes',
+        'settings' => [
+            'accounts.creation_fee_amount' => [
+                'type' => 'number',
+                'default' => 0,
+                'label' => 'Frais de creation de compte (montant fixe)',
+            ],
+            'accounts.creation_fee_account_code' => [
+                'type' => 'text',
+                'default' => null,
+                'label' => 'Code du compte recevant les frais de creation (vide = utilise le compte de frais general)',
+            ],
+        ],
+    ],
+
     'localization' => [
         'label' => 'Localisation',
         'settings' => [
