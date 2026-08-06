@@ -3,14 +3,17 @@
 namespace App\Providers;
 
 use App\Models\Core\AccountClosure;
+use App\Models\Core\CaisseSession;
 use App\Models\Core\EarlyWithdrawalFee;
 use App\Models\Core\Employee;
 use App\Models\Core\LoginAttempt;
+use App\Models\Core\MerchantProfile;
 use App\Models\Core\P2pTransferFeeTier;
 use App\Models\Core\P2pTransferLimit;
 use App\Models\Core\P2pTransferRequest;
 use App\Models\Core\PermissionLevelRequirement;
 use App\Models\Core\Person;
+use App\Models\Core\Report;
 use App\Models\Core\RoleAssignmentLog;
 use App\Models\Core\SystemUpdate;
 use App\Models\Core\Transaction;
@@ -19,13 +22,16 @@ use App\Observers\EmployeeObserver;
 use App\Observers\PermissionObserver;
 use App\Observers\TransactionObserver;
 use App\Policies\AccountClosure as PoliciesAccountClosure;
+use App\Policies\CaisseSessionPolicy;
 use App\Policies\EarlyWithdrawalFeePolicy;
 use App\Policies\LoginAttemptPolicy;
+use App\Policies\MerchantProfilePolicy;
 use App\Policies\P2pTransferFeeTierPolicy;
 use App\Policies\P2pTransferLimitPolicy;
 use App\Policies\P2pTransferRequestPolicy;
 use App\Policies\PermissionLevelRequirementPolicy;
 use App\Policies\PersonPolicy;
+use App\Policies\ReportPolicy;
 use App\Policies\RoleAssignmentLogPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\SystemUpdatesPolicy;
@@ -95,7 +101,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(RoleAssignmentLog::class, RoleAssignmentLogPolicy::class);
         Gate::policy(EarlyWithdrawalFee::class, EarlyWithdrawalFeePolicy::class);
         Gate::policy(SystemUpdate::class, SystemUpdatesPolicy::class);
-
+        Gate::policy(CaisseSession::class, CaisseSessionPolicy::class);
+        Gate::policy(Report::class, ReportPolicy::class);
+        Gate::policy(MerchantProfile::class, MerchantProfilePolicy::class);
         
         Employee::observe(EmployeeObserver::class);
         Transaction::observe(TransactionObserver::class);

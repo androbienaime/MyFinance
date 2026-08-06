@@ -12,6 +12,7 @@ enum TransactionType: string
     case Transfer = 'transfer';
     case TransferFee = 'transfer_fee';
     case SettlementFee = 'settlement_fee';
+    case AccountCreationFee = 'account_creation_fee';
 
 
 
@@ -26,6 +27,7 @@ enum TransactionType: string
             self::Transfer => 'Transfert',
             self::TransferFee => 'Frais de virement',
             self::SettlementFee => 'Frais de retrait anticipe',
+            self::AccountCreationFee => 'Frais de creation de compte',
         };
     }
 }

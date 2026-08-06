@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Core\Customers\Schemas;
 
+use App\Enums\AccountHolderType;
 use App\Models\Core\City;
 use App\Models\Core\Country;
 use App\Models\Core\Currency;
@@ -9,6 +10,7 @@ use App\Models\Core\State;
 use App\Models\Core\TypeOfAccount;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Fieldset;
@@ -17,6 +19,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
+use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Facades\Auth;
 
 class CustomerForm
@@ -163,20 +166,87 @@ class CustomerForm
                     ->description('Un compte est obligatoirement cree avec le client.')
                     ->columns(2)
                     ->schema([
-                        Select::make('type_of_account_id')
-                            ->label('Type de compte')
-                            ->options(TypeOfAccount::pluck('name', 'id'))
-                            ->searchable()
-                            ->required()
-                            ->native(false),
-                                                Select::make('currency_id')
-                        ->label('Devise')
-                        ->options(fn () => Currency::all()->pluck('iso_code', 'id'))
-                        ->default(fn ()=> Currency::where("iso_code", setting("financial.default_currency", default:'HTG'))->first()->id)
-                        ->getOptionLabelFromRecordUsing(
-                            fn ($record) => "{$record->name}"
-                        )
-                        ->required(),
+                        // Select::make('type_of_account_id')
+                        //     ->label('Type de compte')
+                        //     ->options(TypeOfAccount::pluck('name', 'id'))
+                        //     ->searchable()
+                        //     ->required()
+                        //     ->native(false),
+
+            Select::make('type_of_account_id')
+                ->label('Type de compte')
+                ->relationship(
+                        name: 'accounts.typeOfAccount',
+                        titleAttribute: 'name',
+                        modifyQueryUsing: fn (Builder $query, Get $get) => $get('holder_type') === AccountHolderType::Merchant->value
+                            ? $query->where('active_case_payments', false)
+                            : $query,
+                    )
+                ->live()
+                ->required(),
+
+            Select::make('currency_id')
+            ->label('Devise')
+            ->relationship("accounts.currency", "name")
+            ->default(fn ()=> Currency::where("iso_code", setting("financial.default_currency", default:'HTG'))->first()->id)
+            ->getOptionLabelFromRecordUsing(
+                fn ($record) => "{$record->name}"
+            )
+            ->required(),
+            
+            Select::make('holder_type')
+                ->label('Type de titulaire')
+                ->options([
+                    AccountHolderType::Personal->value => 'Personnel',
+                    AccountHolderType::Merchant->value => 'Marchand',
+                ])
+                ->native(false)
+                ->default(AccountHolderType::Personal->value)
+                ->live()
+                ->required()
+                ->disabled(fn (string $operation) => $operation === 'edit')
+                ->dehydrated()
+                // Si le type de compte deja selectionne devient incompatible avec
+                // le nouveau holder_type (cas a cases + marchand), on le vide plutot
+                // que de laisser une valeur invalide en attente de soumission.
+                ->afterStateUpdated(function ($state, Get $get, callable $set) {
+                    if ($state !== AccountHolderType::Merchant->value) {
+                        return;
+                    }
+
+                    $currentTypeId = $get('type_of_account_id');
+
+                    if (! $currentTypeId) {
+                        return;
+                    }
+
+                    $type = \App\Models\Core\TypeOfAccount::find($currentTypeId);
+
+                    if ($type && (bool) $type->active_case_payments) {
+                        $set('type_of_account_id', null);
+                    }
+                }),
+
+            Section::make('Informations commerciales')
+                ->columns(2)
+                ->visible(fn (Get $get) => $get('holder_type') === AccountHolderType::Merchant->value)
+                ->schema([
+                    TextInput::make('merchant_business_name')
+                        ->label('Nom commercial')
+                        ->required(fn (Get $get) => $get('holder_type') === AccountHolderType::Merchant->value)
+                        ->columnSpanFull(),
+
+                    TextInput::make('merchant_category')
+                        ->label('Categorie'),
+
+                    TextInput::make('merchant_business_registration_number')
+                        ->label('NIF / Patente'),
+
+                    Textarea::make('merchant_address')
+                        ->label('Adresse')
+                        ->columnSpanFull(),
+                ])->columnSpanFull(),
+
                         Section::make('Personnes associees au compte')
                             ->description('Ajoute les personnes qui auront un role sur ce compte, en plus du titulaire principal.')
                             ->schema([

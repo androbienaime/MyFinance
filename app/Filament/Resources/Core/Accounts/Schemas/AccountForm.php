@@ -2,13 +2,16 @@
 
 namespace App\Filament\Resources\Core\Accounts\Schemas;
 
+use App\Enums\AccountHolderType;
 use App\Models\Core\AccountPerson;
 use App\Models\Core\Currency;
 use App\Models\Core\Customer;
 use App\Models\Core\Person;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
@@ -71,8 +74,77 @@ class AccountForm
 
             Select::make('type_of_account_id')
                 ->label('Type de compte')
-                ->relationship('typeOfAccount', 'name')
+                ->relationship(
+                        name: 'typeOfAccount',
+                        titleAttribute: 'name',
+                        modifyQueryUsing: fn (Builder $query, Get $get) => $get('holder_type') === AccountHolderType::Merchant->value
+                            ? $query->where('active_case_payments', false)
+                            : $query,
+                    )
+                ->live()
                 ->required(),
+
+            Select::make('currency_id')
+            ->label('Devise')
+            ->relationship("currency", "name")
+            ->default(fn ()=> Currency::where("iso_code", setting("financial.default_currency", default:'HTG'))->first()->id)
+            ->getOptionLabelFromRecordUsing(
+                fn ($record) => "{$record->name}"
+            )
+            ->required(),
+            
+            Select::make('holder_type')
+                ->label('Type de titulaire')
+                ->options([
+                    AccountHolderType::Personal->value => 'Personnel',
+                    AccountHolderType::Merchant->value => 'Marchand',
+                ])
+                ->native(false)
+                ->default(AccountHolderType::Personal->value)
+                ->live()
+                ->required()
+                ->disabled(fn (string $operation) => $operation === 'edit')
+                ->dehydrated()
+                // Si le type de compte deja selectionne devient incompatible avec
+                // le nouveau holder_type (cas a cases + marchand), on le vide plutot
+                // que de laisser une valeur invalide en attente de soumission.
+                ->afterStateUpdated(function ($state, Get $get, callable $set) {
+                    if ($state !== AccountHolderType::Merchant->value) {
+                        return;
+                    }
+
+                    $currentTypeId = $get('type_of_account_id');
+
+                    if (! $currentTypeId) {
+                        return;
+                    }
+
+                    $type = \App\Models\Core\TypeOfAccount::find($currentTypeId);
+
+                    if ($type && (bool) $type->active_case_payments) {
+                        $set('type_of_account_id', null);
+                    }
+                }),
+
+            Section::make('Informations commerciales')
+                ->columns(2)
+                ->visible(fn (Get $get) => $get('holder_type') === AccountHolderType::Merchant->value)
+                ->schema([
+                    TextInput::make('merchant_business_name')
+                        ->label('Nom commercial')
+                        ->required(fn (Get $get) => $get('holder_type') === AccountHolderType::Merchant->value)
+                        ->columnSpanFull(),
+
+                    TextInput::make('merchant_category')
+                        ->label('Categorie'),
+
+                    TextInput::make('merchant_business_registration_number')
+                        ->label('NIF / Patente'),
+
+                    Textarea::make('merchant_address')
+                        ->label('Adresse')
+                        ->columnSpanFull(),
+                ]),
 
             TextInput::make('balance')
                 ->required()
@@ -190,14 +262,6 @@ class AccountForm
                         ->collapsible()
                         ->itemLabel(fn (array $state) => Person::find($state['person_id'] ?? null)?->first_name),
                 ]),
-                Select::make('currency_id')
-                ->label('Devise')
-                ->relationship("currency", "name")
-                ->default(fn ()=> Currency::where("iso_code", setting("financial.default_currency", default:'HTG'))->first()->id)
-                ->getOptionLabelFromRecordUsing(
-                    fn ($record) => "{$record->name}"
-                )
-                ->required(),
         ]);
     }
 }

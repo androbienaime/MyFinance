@@ -113,6 +113,37 @@ return [
         ],
     ],
 
+    'accounts' => [
+        'label' => 'Comptes',
+        'settings' => [
+            'accounts.creation_fee_amount' => [
+                'type' => 'number',
+                'default' => 0,
+                'label' => 'Frais de creation de compte (montant fixe)',
+            ],
+            'accounts.creation_fee_account_code' => [
+                'type' => 'text',
+                'default' => null,
+                'label' => 'Code du compte recevant les frais de creation (vide = utilise le compte de frais general)',
+            ],
+        ],
+    ],
+
+    'merchants' => [
+        'settings' => [
+            'merchants.default_transaction_fee_percentage' => [
+                'type' => 'number',
+                'default' => 0,
+                'label' => 'Pourcentage de frais par defaut sur les paiements marchands',
+            ],
+            'merchants.qr_expiration_seconds' => [
+                'type' => 'number',
+                'default' => 120,
+                'label' => 'Duree de validite d\'un QR de paiement (secondes)',
+            ],
+        ],
+    ],
+
     'localization' => [
         'label' => 'Localisation',
         'settings' => [
