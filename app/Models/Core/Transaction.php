@@ -20,6 +20,8 @@ class Transaction extends Model
         'account_id',
         'code',
         'amount',
+        'currency_id',
+        'exchange_rate_applied',
         'employee_id',
         'initiated_by_customer_id',
         'type',
@@ -56,6 +58,11 @@ class Transaction extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    public function currency(): BelongsTo
+    {
+        return $this->belongsTo(Currency::class);
     }
 
     public function counterpartyAccount(): BelongsTo

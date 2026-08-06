@@ -6,9 +6,12 @@ use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use App\Models\Core\Role;
 use App\Models\Core\PermissionLevelRequirement;
+use Database\Seeders\Concerns\PreparesPermissions;
 
 class TransferAndAuditPermissionsSeeder extends Seeder
 {
+    use PreparesPermissions;
+
     /**
      * name => min_level_to_assign
      */
@@ -70,24 +73,7 @@ class TransferAndAuditPermissionsSeeder extends Seeder
 
     public function run(): void
     {
-        $allPermissions = collect();
-
-        foreach ($this->permissions as $name => $minLevel) {
-            $permission = Permission::firstOrCreate(
-                ['name' => $name, 'guard_name' => 'web']
-            );
-
-            PermissionLevelRequirement::updateOrCreate(
-                ['permission_id' => $permission->id],
-                ['min_level_to_assign' => $minLevel]
-            );
-
-            $allPermissions->push($permission);
-
-            $this->command?->info("Permission prete : {$name} (min_level_to_assign = {$minLevel})");
-        }
-
-        $this->resyncSuperAdmin();
+      $this->preparePermissions($this->permissions);
     }
 
     /**
@@ -97,19 +83,19 @@ class TransferAndAuditPermissionsSeeder extends Seeder
      * pour garantir qu'aucun oubli passe (present ou futur) ne laisse
      * super_admin incomplet.
      */
-    protected function resyncSuperAdmin(): void
-    {
-        $superAdmin = Role::where('name', 'super_admin')->first();
+    // protected function resyncSuperAdmin(): void
+    // {
+    //     $superAdmin = Role::where('name', 'super_admin')->first();
 
-        if (! $superAdmin) {
-            $this->command?->warn('Role super_admin introuvable - resynchronisation ignoree. Lancez myfinance:make-user pour le creer.');
-            return;
-        }
+    //     if (! $superAdmin) {
+    //         $this->command?->warn('Role super_admin introuvable - resynchronisation ignoree. Lancez myfinance:make-user pour le creer.');
+    //         return;
+    //     }
 
-        $superAdmin->syncPermissions(Permission::all());
+    //     $superAdmin->syncPermissions(Permission::all());
 
-        $this->command?->info(
-            'super_admin resynchronise avec la totalite des ' . Permission::count() . ' permissions existantes.'
-        );
-    }
+    //     $this->command?->info(
+    //         'super_admin resynchronise avec la totalite des ' . Permission::count() . ' permissions existantes.'
+    //     );
+    // }
 }

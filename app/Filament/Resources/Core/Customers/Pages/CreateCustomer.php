@@ -2,9 +2,13 @@
 
 namespace App\Filament\Resources\Core\Customers\Pages;
 
+use App\Actions\CreateAccountAction;
+use App\Enums\AccountHolderType;
 use App\Filament\Resources\Core\Customers\CustomerResource;
 use App\Models\Core\Account;
 use App\Models\Core\AccountPerson;
+use App\Models\Core\Currency;
+use App\Models\Core\Customer;
 use App\Models\Core\Person;
 use App\Models\Core\TypeOfAccount;
 use Filament\Actions\Action;
@@ -25,16 +29,35 @@ class CreateCustomer extends CreateRecord
     // pour les reutiliser dans afterCreate() une fois le Customer
     // (et son Person/addresses) deja sauvegardes par Filament.
     protected ?int $pendingTypeOfAccountId = null;
+    protected ?int $pendingCurrencyId = null;
     protected array $pendingAdditionalPeople = [];
+    protected ?AccountHolderType $pendingHolderType = null;
+    protected ?array $pendingMerchantData = [];
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $this->pendingTypeOfAccountId = $data['type_of_account_id'] ?? null;
+        $this->pendingCurrencyId = $data['currency_id'] ?? null;
         $this->pendingAdditionalPeople = $data['additional_account_people'] ?? [];
-
+        $this->pendingHolderType = AccountHolderType::from($data['holder_type'] ?? 'personal');
+        $this->pendingMerchantData = $data['holder_type'] === 'merchant' ? [
+            'business_name' => $data['merchant_business_name'] ?? null,
+            'category' => $data['merchant_category'] ?? null,
+            'business_registration_number' => $data['merchant_business_registration_number'] ?? null,
+            'address' => $data['merchant_address'] ?? null,
+        ] : null;
+        
         // On retire ces cles : elles n'appartiennent ni a Customer ni a
         // Person, Filament ne doit pas essayer de les sauvegarder lui-meme.
-        unset($data['type_of_account_id'], $data['additional_account_people']);
+        unset($data['type_of_account_id'], 
+            $data['additional_account_people'], 
+            $data['currency_id'],
+            $data['holder_type'],
+            $data['merchant_business_name'],
+            $data['merchant_category'],
+            $data['merchant_business_registration_number'],
+            $data['merchant_address'],
+        );
 
         $data['code'] = 'CL-'.strtoupper(uniqid());
         $data['employee_id'] = Auth::user()->employee?->id;
@@ -53,60 +76,47 @@ class CreateCustomer extends CreateRecord
      * gerer ce qui n'est pas une relation Eloquent standard : le compte
      * et les personnes additionnelles.
      */
-    protected function afterCreate(): void
+   protected function afterCreate(): void
     {
         if (! Auth::user()->can('create', Account::class)) {
             throw new AuthorizationException('Vous n\'avez pas le droit de creer un compte.');
         }
 
-        DB::transaction(function () {
+        try {
             $customer = $this->record;
-            $employeeId = Auth::user()->employee?->id;
+            $employee = Auth::user()->employee;
             $typeOfAccount = TypeOfAccount::findOrFail($this->pendingTypeOfAccountId);
+            $currency = Currency::find($this->pendingCurrencyId);
 
-            $account = Account::create([
-                'code' => Account::generateUniqueCode($typeOfAccount),
-                'type_of_account_id' => $typeOfAccount->id,
-                'customer_id' => $customer->id,
-                'balance' => 0,
-                'is_active' => true,
-                'employee_id' => $employeeId,
-            ]);
-
-            // Le titulaire principal (deja cree par Filament via la
-            // relation 'person') devient automatiquement "owner".
-            AccountPerson::create([
-                'account_id' => $account->id,
-                'person_id' => $customer->person_id,
-                'role' => 'owner',
-                'permissions' => ['view', 'withdraw', 'deposit'],
-                'is_active' => true,
-            ]);
-
-            foreach ($this->pendingAdditionalPeople as $item) {
-                $person = Person::create([
-                    'first_name' => $item['first_name'],
-                    'last_name' => $item['last_name'],
-                    'gender' => $item['gender'] ?? null,
-                    'employee_id' => $employeeId,
-                ]);
-
-                AccountPerson::create([
-                    'account_id' => $account->id,
-                    'person_id' => $person->id,
-                    'role' => $item['role'],
-                    'share_percentage' => $item['share_percentage'] ?? null,
-                    'permissions' => match ($item['role']) {
-                        'co_owner' => ['view', 'withdraw', 'deposit'],
-                        'attorney' => ['view', 'withdraw'],
-                        default => ['view'],
-                    },
-                    'is_active' => true,
-                ]);
+            if (! $currency) {
+                throw new \RuntimeException('La devise selectionnee est introuvable.');
             }
 
+            $account = app(CreateAccountAction::class)->handle(
+                customer: $customer,
+                typeOfAccount: $typeOfAccount,
+                currency: $currency,
+                employee: $employee,
+                additionalPeople: $this->pendingAdditionalPeople,
+                holderType: $this->pendingHolderType,
+                merchantData: $this->pendingMerchantData,
+            );
+
             $this->createdAccountCode = $account->code;
-        });
+        } catch (\Throwable $e) {
+            // Le Customer (et son Person associe) ont ete crees par Filament
+            // AVANT afterCreate - si la creation du compte echoue, on les
+            // supprime pour ne pas laisser d'enregistrements orphelins.
+            $person = $this->record->person;
+
+            $this->record->forceDelete();
+
+            if ($person && $person->canBeDeleted()) {
+                $person->delete();
+            }
+
+            throw $e;
+        }
 
         $this->mountAction('accountCreatedModal');
     }

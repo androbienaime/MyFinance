@@ -7,6 +7,7 @@ use App\Enums\TransactionType;
 use App\Exceptions\TransactionRejectedException;
 use App\Filament\Pages\Concerns\TransactionsTableTrait;
 use App\Models\Core\Account;
+use App\Models\Core\Currency;
 use App\Models\Core\Transaction;
 use BackedEnum;
 use Filament\Actions\Action as ActionsAction;
@@ -59,11 +60,14 @@ class DepositPage extends Page implements HasSchemas, HasTable
 
     protected function transactionsTableScope($query): void
     {
-        $query->where('type', TransactionType::Deposit)
-            ->orWhere('type', TransactionType::Withdrawal)
-            ->orWhere('type', TransactionType::AccountSettlement);
+        $query->whereIn('type', [
+            TransactionType::Deposit,
+            TransactionType::Withdrawal,
+            TransactionType::AccountSettlement,
+            TransactionType::AccountCreationFee
+        ]);
     }
-
+    
     protected function showTransferColumns(): bool
     {
         return false;
@@ -105,7 +109,7 @@ class DepositPage extends Page implements HasSchemas, HasTable
                             $set('account_active', null);
                             $set('full_name', '');
                             $set('balance', '');
-
+                            $set('prefix_field', setting("financial.default_currency", default:'HTG'));
                             // Toujours reset l'erreur avant toute nouvelle recherche
                             $this->resetErrorBag('data.full_name');
 
@@ -133,7 +137,8 @@ class DepositPage extends Page implements HasSchemas, HasTable
                             $set('account_active', (bool) $account->is_active);
                             $set('full_name', $account->customer?->person?->full_name ?? 'Client inconnu');
                             $set('balance', (float) $account->balance);
-
+                            $set('prefix_field', $account?->currency?->symbol);
+                        
                             if (! $account->is_active) {
                                 Notification::make()
                                     ->title('Ce compte est desactive.')
@@ -174,7 +179,11 @@ class DepositPage extends Page implements HasSchemas, HasTable
                         ->label(__("myfinance.current_balance"))
                         ->disabled()
                         ->dehydrated(false)
-                        ->prefix('HTG')
+                        // prefix_field est deja rempli (et reset) dans
+                        // afterStateUpdated de account_code - plus besoin de
+                        // fallback qui refaisait une requete Account a chaque
+                        // repaint reactif du champ.
+                        ->prefix(fn (Get $get) => $get('prefix_field'))
                         ->formatStateUsing(fn (Get $get) => number_format((float) ($get('balance') ?? 0), 2))
                         ->hint(fn (Get $get) => $get('account_active') === false ? 'Inactif' : null)
                         ->hintColor('danger')
@@ -184,8 +193,14 @@ class DepositPage extends Page implements HasSchemas, HasTable
                         ->label(__('myfinance.amount'))
                         ->numeric()
                         ->minValue(1)
+                        ->live(onBlur: true)
                         ->required(fn (Get $get) => ! $get('active_case_payments'))
-                        ->prefix('HTG')
+                        ->hint(fn (Get $get) => $get('account_active') === false
+                            ? 'Inactif'
+                            : ($get('total_amount_hint') ?: null))
+                        // Idem : plus de requete Account de secours, prefix_field
+                        // est deja disponible en state.
+                        ->prefix(fn (Get $get) => $get('prefix_field'))
                         ->columnSpanFull()
                         ->extraInputAttributes([
                             // Affichage pur JS, jamais notifie a $wire - voir
@@ -226,8 +241,16 @@ class DepositPage extends Page implements HasSchemas, HasTable
                                     );
                                 }),
                         ),
-                    ]),
-
+                    ])->afterStateUpdated(function($state, callable $set, Get $get) {
+                        // Reutilise le balance deja present en state (rempli
+                        // par afterStateUpdated de account_code) au lieu de
+                        // refaire une requete Account complete (avec 3
+                        // relations eager-loadees inutilement) a chaque
+                        // modification du montant.
+                        $balance = (float) ($get('balance') ?? 0);
+                        $amount = (float) ($state['amount'] ?? 0);
+                        $set('total_amount_hint', $this->computeTotalAmountHint($balance, $amount));
+                    }),
             ViewField::make('tags')
                 ->label('Cases a payer')
                 ->view('filament.forms.components.case-grid')
@@ -309,8 +332,14 @@ class DepositPage extends Page implements HasSchemas, HasTable
         }
     }
 
-    private function getCasePrice(string $accountCode): ?float
+    // Calcule le solde futur affiche en hint sous le champ Montant, a
+    // partir du balance deja charge en state - aucune requete DB ici,
+    // uniquement du calcul en memoire.
+    private function computeTotalAmountHint(float $balance, float $amount): string
     {
-        return Account::where('code', $accountCode)->first()?->typeOfAccount?->price;
+        return sprintf(
+            'Future Balance : %s',
+            number_format($balance + $amount, 2)
+        );
     }
 }

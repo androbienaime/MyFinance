@@ -7,7 +7,6 @@ use App\Enums\TransactionType;
 use App\Exceptions\TransactionRejectedException;
 use App\Filament\Pages\Concerns\TransactionsTableTrait;
 use App\Models\Core\Account;
-use App\Models\Core\AccountPerson;
 use App\Models\Core\Transaction;
 use BackedEnum;
 use Filament\Forms\Components\Textarea;
@@ -23,7 +22,6 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
@@ -34,7 +32,16 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
     protected static string|UnitEnum|null $navigationGroup = 'Operations';
     protected static ?int $navigationSort = 3;
 
-     public static function getNavigationLabel(): string
+    use InteractsWithSchemas;
+    use InteractsWithTable;
+    use TransactionsTableTrait {
+        TransactionsTableTrait::table insteadof InteractsWithTable;
+    }
+
+    /** Cache local pour eviter de re-interroger la DB a chaque render Livewire. */
+    private array $accountCache = [];
+
+    public static function getNavigationLabel(): string
     {
         return __('myfinance.account_settlement');
     }
@@ -43,13 +50,6 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
     {
         return __('myfinance.operations');
     }
-
-    use InteractsWithSchemas;
-    use InteractsWithTable;
-    use TransactionsTableTrait {
-        TransactionsTableTrait::table insteadof InteractsWithTable;
-    }
-
 
     protected function showTransferColumns(): bool
     {
@@ -63,9 +63,11 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
 
     protected function transactionsTableScope($query): void
     {
-        $query->where('type', TransactionType::Deposit)
-            ->orWhere('type', TransactionType::Withdrawal)
-            ->orWhere('type', TransactionType::AccountSettlement);
+        $query->whereIn('type', [
+            TransactionType::Deposit,
+            TransactionType::Withdrawal,
+            TransactionType::AccountSettlement,
+        ]);
     }
 
     public ?array $data = [];
@@ -75,6 +77,22 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
         $this->form->fill();
     }
 
+    /**
+     * Point d'entree unique de resolution de compte, avec cache memoire
+     * pour la duree de vie de l'instance (evite les requetes dupliquees
+     * entre le afterStateUpdated et les prefixes de champs).
+     */
+    private function resolveAccount(?string $code): ?Account
+    {
+        if (blank($code)) {
+            return null;
+        }
+
+        return $this->accountCache[$code] ??= Account::where('code', $code)
+            ->with(['typeOfAccount', 'tagsPayments', 'customer.person', 'currency'])
+            ->first();
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema->components([
@@ -82,15 +100,9 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
                 ->columnSpanFull()
                 ->schema([
                     TextInput::make('account_code')
-                        ->label(__("myfinance.account_code"))
+                        ->label(__('myfinance.account_code'))
                         ->required()
-                        // debounce plutot que onBlur : se declenche des que
-                        // l'utilisateur arrete de taper, sans avoir a sortir
-                        // du champ.
                         ->live(debounce: 600)
-                        // Charge les infos du type de compte des que le code
-                        // est saisi : prix/case, duree (nombre de cases), et
-                        // les cases deja payees pour griser la grille.
                         ->afterStateUpdated(function ($state, callable $set) {
                             // Reset systematique avant toute recherche, pour
                             // ne pas garder l'etat d'un compte precedent si
@@ -101,48 +113,51 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
                             $set('balance', '');
                             $set('references_people', '');
                             $set('fee_amount', '');
+                            $set('fee_hint', '');
+                            $set('prefix_field', '');
 
-                            // Toujours reset l'erreur avant toute nouvelle recherche
                             $this->resetErrorBag('data.full_name');
 
                             if (blank($state)) {
                                 return;
                             }
 
-                            $account = Account::where('code', $state)
-                                ->with('typeOfAccount', 'tagsPayments', 'customer.person')
-                                ->first();
+                            $account = $this->resolveAccount($state);
 
                             if (! $account) {
-                                if(strlen($state) > 4){
+                                if (strlen($state) > 4) {
                                     Notification::make()
                                         ->title('Aucun compte ne correspond a ce code.')
                                         ->warning()
                                         ->send();
 
                                     $this->addError('data.full_name', 'Compte Introuvable.');
-
                                 }
                                 return;
                             }
+
+                            $accountCurrency = $account->currency;
 
                             $set('account_active', (bool) $account->is_active);
                             $set('full_name', $account->customer?->person?->full_name ?? 'Client inconnu');
                             $set('balance', (float) $account->balance);
                             $set('references_people', $account->getAccountInfos());
-                            $set('fee_amount', $account->earlyWithdrawalFeeAmount());
+                            $set('prefix_field', $accountCurrency?->symbol ?? '');
 
                             if (! $account->is_active) {
                                 Notification::make()
                                     ->title('Ce compte est desactive.')
-                                    ->body('Aucun depot ne peut etre enregistre tant que le compte n\'est pas reactive.')
+                                    ->body('Aucun reglement ne peut etre enregistre tant que le compte n\'est pas reactive.')
                                     ->danger()
                                     ->send();
 
                                 $this->addError('data.full_name', 'Compte desactive.');
-
                                 return;
                             }
+
+                            $feeAmount = $account->earlyWithdrawalFeeAmount();
+                            $set('fee_amount', $feeAmount);
+                            $set('fee_hint', $this->computeFeeHint($accountCurrency, $feeAmount));
 
                             $usesCases = (bool) $account->typeOfAccount->active_case_payments;
 
@@ -153,23 +168,17 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
                             $set('tags', []);
                         }),
 
-                // officiel pour un champ "calcule / lecture seule" est un
-                    // TextInput disabled() + dehydrated(false) + formatStateUsing()
-                    // (jamais state(), qui sert a l'hydratation du modele, pas a
-                    // l'affichage). hint()/hintColor()/helperText() sont l'API
-                    // native de Filament pour un indicateur colore - garantis
-                    // reactifs, contrairement au HTML brut via extraInputAttributes.
                     TextInput::make('full_name')
-                        ->label(__("myfinance.account_holder"))
+                        ->label(__('myfinance.account_holder'))
                         ->disabled()
                         ->dehydrated(false)
                         ->formatStateUsing(fn (Get $get) => $get('full_name') ?: '—')
                         ->hint(fn (Get $get) => $get('account_active') === false ? 'Inactif' : null)
                         ->hintColor('danger')
                         ->hintIcon(fn (Get $get) => $get('account_active') === false ? Heroicon::ExclamationTriangle : null),
-                    
+
                     Textarea::make('references_people')
-                        ->label(__("myfinance.people_associated"))
+                        ->label(__('myfinance.people_associated'))
                         ->disabled()
                         ->dehydrated(false)
                         ->formatStateUsing(fn (Get $get) => $get('full_name') ?: '—')
@@ -177,26 +186,28 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
                         ->hintColor('danger')
                         ->hintIcon(fn (Get $get) => $get('account_active') === false ? Heroicon::ExclamationTriangle : null)
                         ->columnSpanFull(),
- 
+
                     TextInput::make('balance')
-                        ->label(__("myfinance.current_balance"))
+                        ->label(__('myfinance.current_balance'))
                         ->disabled()
                         ->dehydrated(false)
-                        ->prefix('HTG')
                         ->formatStateUsing(fn (Get $get) => number_format((float) ($get('balance') ?? 0), 2))
                         ->visible(fn (Get $get) => $get('account_active') ?? false)
+                        ->prefix(fn (Get $get) => $get('prefix_field') ?: '')
                         ->columnSpanFull(),
 
                     TextInput::make('fee_amount')
-                        ->label(__("myfinance.fee_amount"))
+                        ->label(__('myfinance.fee_amount'))
                         ->disabled()
                         ->dehydrated(false)
-                        ->prefix('HTG')
+                        ->prefix(fn (Get $get) => $get('prefix_field') ?: '')
                         ->formatStateUsing(fn (Get $get) => number_format((float) ($get('fee_amount') ?? 0), 2))
-                        ->hint(fn (Get $get) => $get('account_active') === false ? 'Inactif' : null)
-                        ->hintColor('danger')
+                        ->hint(fn (Get $get) => $get('account_active') === false
+                            ? 'Inactif'
+                            : ($get('fee_hint') ?: null))
+                        ->hintColor(fn (Get $get) => $get('account_active') === false ? 'danger' : 'gray')
                         ->columnSpanFull(),
-                    ]),
+                ]),
 
             ViewField::make('tags')
                 ->label('Cases a payer')
@@ -209,6 +220,49 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
         ])->statePath('data');
     }
 
+    /**
+     * Calcule le hint de conversion du frais si le compte de frais
+     * configure a une devise differente de celle du compte regle.
+     * Retourne une chaine vide si aucune conversion n'est necessaire,
+     * ou si le compte de frais n'est pas trouve/configure (le hint
+     * n'est qu'informatif, l'Action fera sa propre verification
+     * bloquante au submit).
+     */
+    private function computeFeeHint($accountCurrency, float $feeAmount): string
+    {
+        if ($feeAmount <= 0 || ! $accountCurrency) {
+            return '';
+        }
+
+        $feesAccountCode = setting('financial.fees_account_code');
+
+        if (blank($feesAccountCode)) {
+            return '';
+        }
+
+        $feesAccount = $this->resolveAccount($feesAccountCode);
+
+        if (! $feesAccount || ! $feesAccount->currency) {
+            return '';
+        }
+
+        $feesCurrency = $feesAccount->currency;
+
+        if ($accountCurrency->is($feesCurrency)) {
+            return '';
+        }
+
+        $convertedFee = $accountCurrency->convertTo($feeAmount, $feesCurrency);
+
+        return sprintf(
+            '≈ %s crediteront le compte de frais (taux: 1 %s = %s %s)',
+            $feesCurrency->format($convertedFee),
+            $accountCurrency->code,
+            number_format($accountCurrency->rateTo($feesCurrency), 4),
+            $feesCurrency->code,
+        );
+    }
+
     public function submitTransaction(): void
     {
         $state = $this->form->getState();
@@ -219,8 +273,8 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
             return;
         }
 
-        if (! Auth::user()->can('createWithdrawal', Transaction::class)) {
-            Notification::make()->title('Vous n\'avez pas le droit d\'effectuer un depot.')->danger()->send();
+        if (! Auth::user()->can('transactions.settlement')) {
+            Notification::make()->title('Vous n\'avez pas le droit d\'effectuer un reglement de compte.')->danger()->send();
             return;
         }
 
@@ -234,34 +288,24 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
         }
 
         if (! $account->is_active) {
-            Notification::make()->title('Ce compte est desactive, depot refuse.')->danger()->send();
+            Notification::make()->title('Ce compte est desactive, reglement refuse.')->danger()->send();
             return;
         }
 
-        // Point de securite : pour un compte a cases, le montant n'est
-        // JAMAIS pris depuis $state['amount'] (calcul cote client, donc
-        // manipulable) - il est toujours recalcule dans DepositAction, a
-        // partir du prix reel de la case et du nombre de cases cochees.
         try {
             $transaction = app(AccountSettlementAction::class)->handle(
                 $state['account_code'],
-                (float) ($state['amount'] ?? 0), // ignore par l'Action si le compte utilise les cases
                 $employee,
-                ($state['tags'] ?? [])
             );
 
-            Notification::make()->title("Depot {$transaction->code} enregistre.")->success()->send();
+            Notification::make()->title("Reglement {$transaction->code} enregistre.")->success()->send();
 
+            $this->accountCache = [];
             $this->form->fill();
 
             // active_case_payments / account_active / case_price /
             // case_duration / paid_tags ne sont PAS des champs declares du
-            // formulaire (juste des cles ecrites via $set() dans le
-            // afterStateUpdated de account_code) - form->fill() ne les
-            // remet pas a zero, contrairement aux vrais champs
-            // (account_code, full_name, balance, amount, tags). Sans ce
-            // reset manuel, visible() de la grille continuait de lire les
-            // anciennes valeurs et la grille restait affichee.
+            // formulaire - form->fill() ne les remet pas a zero.
             $this->data['active_case_payments'] = false;
             $this->data['account_active'] = null;
             $this->data['case_price'] = 0;
@@ -270,17 +314,9 @@ class AccountSettlement extends Page implements HasSchemas, HasTable
 
             $this->resetTable();
 
-            // Uniquement en cas de succes reel : on demande a la grille et
-            // au champ Montant de se reinitialiser visuellement tout de
-            // suite (au lieu d'attendre le prochain re-render Livewire, qui
-            // ne toucherait meme pas .value puisqu'on l'ecrit en JS pur).
             $this->dispatch('deposit-saved');
         } catch (TransactionRejectedException $e) {
             Notification::make()->title($e->getMessage())->danger()->send();
         }
     }
-
-
-    
-
 }

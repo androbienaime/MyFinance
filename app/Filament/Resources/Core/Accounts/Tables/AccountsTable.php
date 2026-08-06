@@ -6,6 +6,7 @@ use App\Actions\AccountRestorationAction;
 use App\Exceptions\TransactionRejectedException;
 use App\Filament\Actions\GuardedDeleteAction;
 use App\Filament\Actions\GuardedDeleteBulkAction;
+use App\Models\Core\Account;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -32,8 +33,11 @@ class AccountsTable
                     ->label(__('Full name'))
                     ->searchable(),
                 TextColumn::make('balance')
-                    ->numeric()
+                    ->money(fn(Account $record) => $record?->currency?->iso_code)
                     ->sortable(),
+                TextColumn::make('currency.name')
+                    ->label(__('Currency'))
+                    ->searchable(),
                 TextColumn::make('employee.first_name')
                     ->label(__('Employee'))
                     ->searchable(),

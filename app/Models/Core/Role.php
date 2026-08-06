@@ -142,7 +142,7 @@ class Role extends SpatieRole
             User::class,
             'model',
             config('permission.table_names.model_has_roles'),
-            app(\Spatie\Permission\PermissionRegistrar::class)->pkey,
+            config('permission.column_names.role_pivot_key') ?: 'role_id',
             config('permission.column_names.model_morph_key')
         );
     }

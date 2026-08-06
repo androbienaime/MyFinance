@@ -8,19 +8,20 @@ use App\Enums\TransactionDirection;
 use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
 use App\Exceptions\TransactionRejectedException;
-use App\Filament\Pages\Core\TransferPage;
+use App\Models\Core\Currency;
 use App\Models\Core\Transaction;
 use App\Notifications\TransactionConfirmed;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
-
+use Filament\Notifications\Notification;
+use Filament\Tables\Filters\Filter;
+use Illuminate\Database\Eloquent\Builder;
 /**
  * Partagee par DepositPage/WithdrawPage/PaymentPage : le tableau et les
  * actions d'approbation sont identiques quelle que soit la page, seul
@@ -31,18 +32,7 @@ trait TransactionsTableTrait
     public function table(Table $table): Table
     {
         return $table
-            ->query(function () {
-                $employee = Auth::user()->employee;
-                $query = Transaction::query();
-
-                if ($employee) {
-                    $query->orderByRelevanceTo($employee->branch_id, $employee->id);
-                }
-
-                return $query;
-            })
             ->columns([
-                // TextColumn::make('code')->label('Code')->searchable()->copyable(),
                 TextColumn::make('account.code')->label(__('myfinance.account'))->searchable(),
 
                 TextColumn::make('account.customer.person.full_name')
@@ -55,56 +45,63 @@ trait TransactionsTableTrait
                     ->label(__('myfinance.type'))
                     ->badge()
                     ->formatStateUsing(fn ($record) => $record->type->label()),
-                    // ->color(fn ($record) => $record->type->color()),
 
                 TextColumn::make('counterpartyAccount.code')
-                ->label('Compte lie')
-                ->placeholder('—')
-                ->description(fn ($record) => $record?->counterpartyAccount?->customer?->person?->full_name)
-                ->toggleable()
-                ->visible($this->showTransferColumns()),
+                    ->label('Compte lie')
+                    ->placeholder('—')
+                    ->description(fn ($record) => $record?->counterpartyAccount?->customer?->person?->full_name)
+                    ->toggleable()
+                    ->visible($this->showTransferColumns()),
 
-                TextColumn::make('amount')->label(__('myfinance.amount'))->money('HTG')->sortable(),
+                TextColumn::make('amount')
+                    ->label(__('myfinance.amount'))
+                    ->formatStateUsing(fn ($record) => $record->currency
+                        ? $record->currency->format((float) $record->amount)
+                        : number_format((float) $record->amount, 2))
+                    ->description(fn ($record) => $record->exchange_rate_applied
+                        ? sprintf('Taux applique: %s', number_format((float) $record->exchange_rate_applied, 4))
+                        : null)
+                    ->sortable(),
+
                 TextColumn::make('tagsPayments')
-                ->label('Cases')
-                ->badge()
-                ->separator(',')
-                ->getStateUsing(function ($record) {
-                    $numbers = $record->tagsPayments
-                        ->pluck('tags')
-                        ->flatten()
-                        ->filter(fn ($n) => is_numeric($n))
-                        ->map(fn ($n) => (int) $n)
-                        ->unique()
-                        ->values();
-                
-                    return implode(', ', Transaction::compressTagsToRanges($numbers));
-                })
-                ->wrap()
-                ->extraAttributes(['class' => 'min-w-[180px]'])
-                ->color('info')
-                ->visible(!$this->showTransferColumns()),
+                    ->label('Cases')
+                    ->badge()
+                    ->separator(',')
+                    ->getStateUsing(function ($record) {
+                        $numbers = $record->tagsPayments
+                            ->pluck('tags')
+                            ->flatten()
+                            ->filter(fn ($n) => is_numeric($n))
+                            ->map(fn ($n) => (int) $n)
+                            ->unique()
+                            ->values();
+
+                        return implode(', ', Transaction::compressTagsToRanges($numbers));
+                    })
+                    ->wrap()
+                    ->extraAttributes(['class' => 'min-w-[180px]'])
+                    ->color('info')
+                    ->visible(!$this->showTransferColumns()),
 
                 TextColumn::make('direction')
-                ->label('Sens')
-                ->badge()
-                ->color(fn (?TransactionDirection $state) => match ($state) {
-                    TransactionDirection::Debit => 'danger',
-                    TransactionDirection::Credit => 'success',
-                    null => 'gray',
-                })
-                ->formatStateUsing(fn (?TransactionDirection $state) => match ($state) {
-                    TransactionDirection::Debit => 'Sortant',
-                    TransactionDirection::Credit => 'Entrant',
-                    null => '—',
-                })
-                ->visible($this->showTransferColumns()),
-                
+                    ->label('Sens')
+                    ->badge()
+                    ->color(fn (?TransactionDirection $state) => match ($state) {
+                        TransactionDirection::Debit => 'danger',
+                        TransactionDirection::Credit => 'success',
+                        null => 'gray',
+                    })
+                    ->formatStateUsing(fn (?TransactionDirection $state) => match ($state) {
+                        TransactionDirection::Debit => 'Sortant',
+                        TransactionDirection::Credit => 'Entrant',
+                        null => '—',
+                    })
+                    ->visible($this->showTransferColumns()),
+
                 TextColumn::make('status')
                     ->label(__('myfinance.status'))
                     ->badge()
                     ->formatStateUsing(fn ($record) => $record->status->label()),
-                    // ->color(fn ($record) => $record->status->color()),
 
                 TextColumn::make('employee.fullName')
                     ->label(__('myfinance.employee'))
@@ -113,7 +110,7 @@ trait TransactionsTableTrait
                 TextColumn::make('transfer_group_id')
                     ->label('Groupe de virement')
                     ->copyable()
-                    ->limit(8) // affiche juste le debut de l'UUID, suffisant pour reperer visuellement le lien entre les 2-4 jambes
+                    ->limit(8)
                     ->placeholder('—')
                     ->toggleable(isToggledHiddenByDefault: true),
 
@@ -123,10 +120,56 @@ trait TransactionsTableTrait
                 SelectFilter::make('status')
                     ->label(__('myfinance.status'))
                     ->options(collect(TransactionStatus::cases())->mapWithKeys(fn ($s) => [$s->value => $s->label()])),
-            
+
                 SelectFilter::make('type')
-                ->label('Type de transaction')
-                ->options(collect(TransactionType::cases())->mapWithKeys(fn ($case) => [$case->value => $case->label()])),
+                    ->label('Type de transaction')
+                    ->options(collect(TransactionType::cases())->mapWithKeys(fn ($case) => [$case->value => $case->label()])),
+                SelectFilter::make('currency_id')
+                ->label('Devise')
+                ->options(fn () => Currency::query()
+                    ->pluck('iso_code', 'id'))
+                ->searchable(),
+                Filter::make('has_conversion')
+                ->label('Avec conversion de devise')
+                ->query(fn (Builder $query) => $query->whereNotNull('exchange_rate_applied'))
+                ->toggle(),
+                Filter::make('amount_range')
+                ->label('Plage de montant')
+                ->schema([
+                    TextInput::make('amount_from')
+                        ->label('Montant min')
+                        ->numeric()
+                        ->minValue(0),
+                    TextInput::make('amount_to')
+                        ->label('Montant max')
+                        ->numeric()
+                        ->minValue(0),
+                ])
+                ->columns(2)
+                ->query(function (Builder $query, array $data): Builder {
+                    return $query
+                        ->when(
+                            filled($data['amount_from'] ?? null),
+                            fn (Builder $q) => $q->where('amount', '>=', (float) $data['amount_from']),
+                        )
+                        ->when(
+                            filled($data['amount_to'] ?? null),
+                            fn (Builder $q) => $q->where('amount', '<=', (float) $data['amount_to']),
+                        );
+                })
+                ->indicateUsing(function (array $data): array {
+                    $indicators = [];
+
+                    if (filled($data['amount_from'] ?? null)) {
+                        $indicators[] = 'Min: ' . number_format((float) $data['amount_from'], 2);
+                    }
+
+                    if (filled($data['amount_to'] ?? null)) {
+                        $indicators[] = 'Max: ' . number_format((float) $data['amount_to'], 2);
+                    }
+
+                    return $indicators;
+                }),
             ])
             ->recordActions([
                 Action::make('approve')
@@ -158,61 +201,66 @@ trait TransactionsTableTrait
                     }),
 
                 Action::make('delete')
-                ->label(__('myfinance.delete'))
-                ->icon('heroicon-o-trash')
-                ->color('danger')
-                ->authorize(fn ($record) => Auth::user()->can('delete', $record))
-                ->requiresConfirmation()
-                ->modalDescription('Cette action annule le mouvement de solde si la transaction etait completee, et libere les cases associees si applicable. Cette action est tracee et irreversible.')
-                ->schema([
-                    Textarea::make('reason')
-                        ->label('Motif de la suppression')
-                        ->required(),
-                ])
-                ->action(function ($record, array $data) {
-                    try {
-                        app(DeleteTransactionAction::class)->handle($record, Auth::user()->employee, $data['reason']);
-                        Notification::make()->title('Transaction supprimee et solde ajuste.')->success()->send();
-                    } catch (TransactionRejectedException $e) {
-                        Notification::make()->title($e->getMessage())->danger()->send();
-                    }
-                }),
+                    ->label(__('myfinance.delete'))
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->authorize(fn ($record) => Auth::user()->can('delete', $record))
+                    ->requiresConfirmation()
+                    ->modalDescription('Cette action annule le mouvement de solde si la transaction etait completee, et libere les cases associees si applicable. Cette action est tracee et irreversible.')
+                    ->schema([
+                        Textarea::make('reason')
+                            ->label('Motif de la suppression')
+                            ->required(),
+                    ])
+                    ->action(function ($record, array $data) {
+                        try {
+                            app(DeleteTransactionAction::class)->handle($record, Auth::user()->employee, $data['reason']);
+                            Notification::make()->title('Transaction supprimee et solde ajuste.')->success()->send();
+                        } catch (TransactionRejectedException $e) {
+                            Notification::make()->title($e->getMessage())->danger()->send();
+                        }
+                    }),
 
-            // Historique des approbations - repond a "qui l'a approuve"
-            Action::make('viewApprovals')
-                ->label(__('myfinance.historical'))
-                ->icon('heroicon-o-clock')
-                ->color('gray')
-                ->modalHeading('Historique des decisions')
-                ->modalSubmitAction(false)
-                ->modalCancelActionLabel(__('myfinance.close'))
-                ->schema(fn ($record) => $record->approvals->map(fn ($approval) =>
-                    Placeholder::make("approval_{$approval->id}")
-                        ->label("Niveau {$approval->level} — {$approval->decision}")
-                        ->content(
-                            ($approval->approver?->name ?? 'Utilisateur supprime')
-                            . ' — ' . $approval->created_at->format('d/m/Y H:i')
-                            . ($approval->comment ? " — \"{$approval->comment}\"" : '')
-                        )->disabled()
-                )->all() ?: [
-                    Placeholder::make('none')->label('')->disabled()->content('Aucune approbation enregistree pour cette transaction.'),
-                ]),
-                
+                Action::make('viewApprovals')
+                    ->label(__('myfinance.historical'))
+                    ->icon('heroicon-o-clock')
+                    ->color('gray')
+                    ->modalHeading('Historique des decisions')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel(__('myfinance.close'))
+                    ->schema(fn ($record) => $record->approvals->map(fn ($approval) =>
+                        Placeholder::make("approval_{$approval->id}")
+                            ->label("Niveau {$approval->level} — {$approval->decision}")
+                            ->content(
+                                ($approval->approver?->name ?? 'Utilisateur supprime')
+                                . ' — ' . $approval->created_at->format('d/m/Y H:i')
+                                . ($approval->comment ? " — \"{$approval->comment}\"" : '')
+                            )->disabled()
+                    )->all() ?: [
+                        Placeholder::make('none')->label('')->disabled()->content('Aucune approbation enregistree pour cette transaction.'),
+                    ]),
+
                 Action::make('resend_whatsapp')
-                ->label('Renvoyer par WhatsApp')
-                ->icon('heroicon-o-chat-bubble-left-right')
-                ->action(function (Transaction $record) {
-                    $record->account->customer->notify(new TransactionConfirmed($record));
-                    Notification::make()
-                        ->title('Message WhatsApp envoyé')
-                        ->success()
-                        ->send()
-                        ->sendToDatabase(Auth::user()->employee);
-                })
+                    ->label('Renvoyer par WhatsApp')
+                    ->icon('heroicon-o-chat-bubble-left-right')
+                    ->action(function (Transaction $record) {
+                        $record->account->customer->notify(new TransactionConfirmed($record));
+                        Notification::make()
+                            ->title('Message WhatsApp envoyé')
+                            ->success()
+                            ->send()
+                            ->sendToDatabase(Auth::user()->employee);
+                    }),
             ])
             ->query(function () {
                 $employee = Auth::user()->employee;
-                $query = Transaction::query();
+
+                $query = Transaction::query()->with([
+                    'account.customer.person',
+                    'counterpartyAccount.customer.person',
+                    'employee',
+                    'currency', // evite un N+1 sur chaque ligne du tableau
+                ]);
 
                 if ($employee) {
                     $query->orderByRelevanceTo($employee->branch_id, $employee->id);
