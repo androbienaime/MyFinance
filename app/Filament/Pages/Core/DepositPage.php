@@ -64,6 +64,7 @@ class DepositPage extends Page implements HasSchemas, HasTable
             TransactionType::Deposit,
             TransactionType::Withdrawal,
             TransactionType::AccountSettlement,
+            TransactionType::AccountCreationFee
         ]);
     }
     
