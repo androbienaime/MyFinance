@@ -23,5 +23,6 @@ class RolePermissionSeeder extends Seeder
         $this->callTracked(TransferAndAuditPermissionsSeeder::class);
         $this->callTracked(CurrencyPermissionSeeder::class);
         $this->callTracked(ReportPermissionSeeder::class);
+        $this->callTracked(MerchantProfileSeeder::class);
     }
 }

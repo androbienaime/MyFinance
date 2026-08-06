@@ -3,6 +3,7 @@
 namespace App\Models\Core;
 
 use App\Contracts\Deletable;
+use App\Enums\AccountHolderType;
 use App\Enums\TransactionDirection;
 use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -28,11 +30,13 @@ class Account extends Model implements Deletable
         'balance',
         'is_active',
         'employee_id',
+        'holder_type'
     ];
 
     protected $casts = [
         'balance' => 'decimal:2',
         'is_active' => 'boolean',
+        'holder_type' => AccountHolderType::class
     ];
 
     public function typeOfAccount(): BelongsTo
@@ -47,6 +51,16 @@ class Account extends Model implements Deletable
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public function merchantProfile(): HasOne
+    {
+        return $this->hasOne(MerchantProfile::class);
+    }
+
+    public function isMerchant(): bool
+    {
+        return $this->holder_type === AccountHolderType::Merchant;
     }
 
     public function customer(): BelongsTo

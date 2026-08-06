@@ -3,6 +3,8 @@
 // app/Actions/CreateAccountAction.php
 namespace App\Actions;
 
+use App\Enums\AccountHolderType;
+use App\Enums\MerchantStatus;
 use App\Enums\TransactionDirection;
 use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
@@ -12,6 +14,7 @@ use App\Models\Core\AccountPerson;
 use App\Models\Core\Currency;
 use App\Models\Core\Customer;
 use App\Models\Core\Employee;
+use App\Models\Core\MerchantProfile;
 use App\Models\Core\Person;
 use App\Models\Core\Transaction;
 use App\Models\Core\TypeOfAccount;
@@ -35,11 +38,21 @@ class CreateAccountAction
         Employee $employee,
         array $additionalPeople = [],
         ?float $creationFeeOverride = null,
+        AccountHolderType $holderType = AccountHolderType::Personal,
+        ?array $merchantData = null, // ['business_name' => ..., 'category' => ..., ...]
     ): Account {
-        return DB::transaction(function () use ($customer, $typeOfAccount, $currency, $employee, $additionalPeople, $creationFeeOverride) {
+        return DB::transaction(function () use (
+            $customer, $typeOfAccount, $currency, $employee,
+            $additionalPeople, $creationFeeOverride, $holderType, $merchantData
+        ) {
+            if ($holderType === AccountHolderType::Merchant && empty($merchantData['business_name'])) {
+                throw new TransactionRejectedException('Le nom commercial est requis pour un compte marchand.');
+            }
+
             $account = Account::create([
                 'code' => Account::generateUniqueCode($typeOfAccount),
                 'type_of_account_id' => $typeOfAccount->id,
+                'holder_type' => $holderType,
                 'customer_id' => $customer->id,
                 'currency_id' => $currency->id,
                 'balance' => 0,
@@ -77,12 +90,22 @@ class CreateAccountAction
                 ]);
             }
 
+            if ($holderType === AccountHolderType::Merchant) {
+                MerchantProfile::create([
+                    'account_id' => $account->id,
+                    'business_name' => $merchantData['business_name'],
+                    'category' => $merchantData['category'] ?? null,
+                    'business_registration_number' => $merchantData['business_registration_number'] ?? null,
+                    'address' => $merchantData['address'] ?? null,
+                    'status' => MerchantStatus::Pending, // validation manuelle requise avant activation
+                ]);
+            }
+
             $this->chargeCreationFeeIfAny($account, $employee, $creationFeeOverride);
 
             return $account;
         });
     }
-
     private function chargeCreationFeeIfAny(Account $account, Employee $employee, ?float $override): void
     {
         $feeAmount = $override ?? (float) setting('accounts.creation_fee_amount', 0);

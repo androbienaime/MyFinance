@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Core\Accounts\Pages;
 
 use App\Actions\CreateAccountAction;
+use App\Enums\AccountHolderType;
 use App\Filament\Resources\Core\Accounts\AccountResource;
 use App\Models\Core\Account;
 use App\Models\Core\Currency;
@@ -28,12 +29,29 @@ class ListAccounts extends ListRecords
                     $typeOfAccount = TypeOfAccount::findOrFail($data['type_of_account_id']);
                     $currency = Currency::findOrFail($data['currency_id']);
                     $employee = Auth::user()->employee;
+                    $pendingHolderType = AccountHolderType::from($data['holder_type'] ?? 'personal');
+                    $pendingMerchantData = $data['holder_type'] === 'merchant' ? [
+                        'business_name' => $data['merchant_business_name'] ?? null,
+                        'category' => $data['merchant_category'] ?? null,
+                        'business_registration_number' => $data['merchant_business_registration_number'] ?? null,
+                        'address' => $data['merchant_address'] ?? null,
+                    ] : null;
+
+                    unset(
+                        $data['holder_type'],
+                        $data['merchant_business_name'],
+                        $data['merchant_category'],
+                        $data['merchant_business_registration_number'],
+                        $data['merchant_address'],
+                    );
 
                     return app(CreateAccountAction::class)->handle(
                         customer: $customer,
                         typeOfAccount: $typeOfAccount,
                         currency: $currency,
                         employee: $employee,
+                        holderType: $pendingHolderType,
+                        merchantData: $pendingMerchantData,
                     );
                 })
                 ->registerModalActions([

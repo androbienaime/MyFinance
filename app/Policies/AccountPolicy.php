@@ -7,10 +7,17 @@ use App\Models\User;
 
 class AccountPolicy
 {
+    private const NON_BYPASSABLE = ['update'];
+
     public function before(User $user, string $ability): ?bool
     {
+        if (in_array($ability, self::NON_BYPASSABLE, true)) {
+            return null; // laisse la methode dediee statuer
+        }
+
         return $user->isHeadOffice() ? true : null;
     }
+
 
     public function viewAny(User $user): bool
     {
@@ -29,7 +36,7 @@ class AccountPolicy
 
     public function update(User $user, Account $account): bool
     {
-        return $user->can('accounts.update');
+        return false; // Les comptes ne sont pas modifiables par les utilisateurs, seulement par le systeme (ex: via des actions de credit/debit)
     }
 
     /**

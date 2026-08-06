@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Core\Customers\Pages;
 
 use App\Actions\CreateAccountAction;
+use App\Enums\AccountHolderType;
 use App\Filament\Resources\Core\Customers\CustomerResource;
 use App\Models\Core\Account;
 use App\Models\Core\AccountPerson;
@@ -30,15 +31,33 @@ class CreateCustomer extends CreateRecord
     protected ?int $pendingTypeOfAccountId = null;
     protected ?int $pendingCurrencyId = null;
     protected array $pendingAdditionalPeople = [];
+    protected ?AccountHolderType $pendingHolderType = null;
+    protected ?array $pendingMerchantData = [];
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $this->pendingTypeOfAccountId = $data['type_of_account_id'] ?? null;
         $this->pendingCurrencyId = $data['currency_id'] ?? null;
         $this->pendingAdditionalPeople = $data['additional_account_people'] ?? [];
+        $this->pendingHolderType = AccountHolderType::from($data['holder_type'] ?? 'personal');
+        $this->pendingMerchantData = $data['holder_type'] === 'merchant' ? [
+            'business_name' => $data['merchant_business_name'] ?? null,
+            'category' => $data['merchant_category'] ?? null,
+            'business_registration_number' => $data['merchant_business_registration_number'] ?? null,
+            'address' => $data['merchant_address'] ?? null,
+        ] : null;
+        
         // On retire ces cles : elles n'appartiennent ni a Customer ni a
         // Person, Filament ne doit pas essayer de les sauvegarder lui-meme.
-        unset($data['type_of_account_id'], $data['additional_account_people'], $data['currency_id']);
+        unset($data['type_of_account_id'], 
+            $data['additional_account_people'], 
+            $data['currency_id'],
+            $data['holder_type'],
+            $data['merchant_business_name'],
+            $data['merchant_category'],
+            $data['merchant_business_registration_number'],
+            $data['merchant_address'],
+        );
 
         $data['code'] = 'CL-'.strtoupper(uniqid());
         $data['employee_id'] = Auth::user()->employee?->id;
@@ -79,6 +98,8 @@ class CreateCustomer extends CreateRecord
                 currency: $currency,
                 employee: $employee,
                 additionalPeople: $this->pendingAdditionalPeople,
+                holderType: $this->pendingHolderType,
+                merchantData: $this->pendingMerchantData,
             );
 
             $this->createdAccountCode = $account->code;

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 
 class Customer extends Model implements Deletable
 {
@@ -86,5 +87,24 @@ class Customer extends Model implements Deletable
         $count = $this->accounts()->count();
 
         return "Ce client possède encore {$count} compte(s) et ne peut pas être supprimé.";
+    }
+
+
+    public function hasPinSet(): bool
+    {
+        return ! is_null($this->pin_hash);
+    }
+
+    public function setPin(string $pin): void
+    {
+        $this->update([
+            'pin_hash' => Hash::make($pin),
+            'pin_set_at' => now(),
+        ]);
+    }
+
+    public function verifyPin(string $pin): bool
+    {
+        return $this->pin_hash && Hash::check($pin, $this->pin_hash);
     }
 }
