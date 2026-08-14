@@ -6,6 +6,7 @@ namespace App\Notifications;
 use App\Notifications\Channels\WhatsAppChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class P2pTransferOtpCode extends Notification implements ShouldQueue
@@ -36,5 +37,13 @@ class P2pTransferOtpCode extends Notification implements ShouldQueue
                 $this->toAccountCode,
             ],
         ];
+    }
+
+    public function toMail($notifiable): MailMessage
+    {
+       return (new MailMessage)
+            ->line('Code de transfert P2P.')
+            ->action('code :', $this->code)
+            ->line('Merci d\'utiliser notre application!');
     }
 }

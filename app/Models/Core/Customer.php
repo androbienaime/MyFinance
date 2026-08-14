@@ -12,10 +12,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class Customer extends Model implements Deletable
+class Customer extends Authenticatable implements Deletable
 {
-    use HasFactory, SoftDeletes, HasDeletionGuard, Notifiable;
+    use HasFactory, SoftDeletes, HasDeletionGuard, Notifiable, HasApiTokens;
 
     protected $fillable = [
         'code',
@@ -25,8 +27,37 @@ class Customer extends Model implements Deletable
         'identity_number',
         'employee_id',
         'address_id',
-        'phone_number'
+        'email',
+        'phone_number',
+        'password',
+        'activation_code_hash',
+        'activation_expires_at',
+        'activated_at',
+        'is_active',
+        'password_changed_at',
     ];
+
+    protected $hidden = [
+        'password',
+        'activation_code_hash',
+        'remember_token',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'password' => 'hashed',
+            'activation_expires_at' => 'datetime',
+            'activated_at' => 'datetime',
+            'password_changed_at' => 'datetime',
+            'is_active' => 'boolean',
+        ];
+    }
+
+    public function isActivated(): bool
+    {
+        return ! is_null($this->activated_at);
+    }
 
     public function employee(): BelongsTo
     {

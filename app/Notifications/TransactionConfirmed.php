@@ -18,8 +18,8 @@ class TransactionConfirmed extends Notification implements ShouldQueue
 
     public function via($notifiable): array
     {
-        return [WhatsAppChannel::class];
-        // Tu peux combiner: return [WhatsAppChannel::class, 'mail', 'database'];
+        return ['database', WhatsAppChannel::class];
+        // On peux combiner: return [WhatsAppChannel::class, 'mail', 'database'];
     }
 
     /**
@@ -48,5 +48,46 @@ class TransactionConfirmed extends Notification implements ShouldQueue
         //     'text' => "Bonjour, votre {$type} de {$montant} sur le compte {$compte} a été confirmée. "
         //             . "Nouveau solde : {$solde}.",
         // ];
+    }
+
+    public function toMail($notifiable): \Illuminate\Notifications\Messages\MailMessage
+    {
+        $montant = number_format($this->transaction->amount, 2) . ' HTG';
+        $type    = $this->transaction->type?->label() ?? 'Transaction';
+        $compte  = $this->transaction->account->code ?? '';
+        $full_name = $this->transaction->account->customer->person->full_name ?? ' ';
+        $transaction_id = $this->transaction->code ?? '';
+        $solde   = number_format($this->transaction->account->balance, 2) . ' HTG';
+        $date = $this->transaction->created_at;
+
+        return (new \Illuminate\Notifications\Messages\MailMessage)
+            ->subject("Confirmation de {$type} - {$montant}")
+            ->greeting("Bonjour {$full_name},")
+            ->line("Votre {$type} de {$montant} sur le compte {$compte} a été confirmée.")
+            ->line("Nouveau solde : {$solde}.")
+            ->line("ID de transaction : {$transaction_id}.")
+            ->line("Date : {$date}.")
+            ->line('Merci d\'utiliser notre application!');
+    }
+
+    public function toArray($notifiable): array
+    {
+        return [
+            'type' => 'transaction',
+            'transaction_code' => $this->transaction->code,
+            'transaction_type' => $this->transaction->type->value,
+            'amount' => (float) $this->transaction->amount,
+            'account_code' => $this->transaction->account->code,
+            'message' => $this->buildMessage(),
+        ];
+    }
+
+    private function buildMessage(): string
+    {
+        return match ($this->transaction->type) {
+            \App\Enums\TransactionType::Deposit => "Depot de {$this->transaction->amount} HTG confirme sur le compte {$this->transaction->account->code}.",
+            \App\Enums\TransactionType::Withdrawal => "Retrait de {$this->transaction->amount} HTG confirme sur le compte {$this->transaction->account->code}.",
+            default => "Transaction {$this->transaction->code} confirmee.",
+        };
     }
 }

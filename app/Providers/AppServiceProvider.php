@@ -7,12 +7,15 @@ use App\Models\Core\CaisseSession;
 use App\Models\Core\EarlyWithdrawalFee;
 use App\Models\Core\Employee;
 use App\Models\Core\LoginAttempt;
+use App\Models\Core\MerchantApiKey;
+use App\Models\Core\MerchantLoginAttempt;
 use App\Models\Core\MerchantProfile;
 use App\Models\Core\P2pTransferFeeTier;
 use App\Models\Core\P2pTransferLimit;
 use App\Models\Core\P2pTransferRequest;
 use App\Models\Core\PermissionLevelRequirement;
 use App\Models\Core\Person;
+use App\Models\Core\QrPaymentRequest;
 use App\Models\Core\Report;
 use App\Models\Core\RoleAssignmentLog;
 use App\Models\Core\SystemUpdate;
@@ -25,12 +28,15 @@ use App\Policies\AccountClosure as PoliciesAccountClosure;
 use App\Policies\CaisseSessionPolicy;
 use App\Policies\EarlyWithdrawalFeePolicy;
 use App\Policies\LoginAttemptPolicy;
+use App\Policies\MerchantApiKeyPolicy;
+use App\Policies\MerchantLoginAttemptPolicy;
 use App\Policies\MerchantProfilePolicy;
 use App\Policies\P2pTransferFeeTierPolicy;
 use App\Policies\P2pTransferLimitPolicy;
 use App\Policies\P2pTransferRequestPolicy;
 use App\Policies\PermissionLevelRequirementPolicy;
 use App\Policies\PersonPolicy;
+use App\Policies\QrPaymentRequestPolicy;
 use App\Policies\ReportPolicy;
 use App\Policies\RoleAssignmentLogPolicy;
 use App\Policies\RolePolicy;
@@ -40,10 +46,13 @@ use App\Services\SettingsOptionsResolver;
 use BezhanSalleh\LanguageSwitch\LanguageSwitch;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -82,6 +91,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('merchant-api', function (Request $request) {
+            // limite par cle API du marchand plutot que par IP,
+            // pour eviter qu'un marchand epuise le quota d'un autre
+            $apiKey = $request->header('X-API-Key') ?? $request->ip();
+
+            return Limit::perMinute(240)->by($apiKey);
+        });
+
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(\App\Models\Core\Account::class, \App\Policies\AccountPolicy::class);
         Gate::policy(\App\Models\Core\Customer::class, \App\Policies\CustomerPolicy::class);
@@ -104,6 +121,11 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(CaisseSession::class, CaisseSessionPolicy::class);
         Gate::policy(Report::class, ReportPolicy::class);
         Gate::policy(MerchantProfile::class, MerchantProfilePolicy::class);
+        Gate::policy(MerchantApiKey::class, MerchantApiKeyPolicy::class);
+        Gate::policy(MerchantLoginAttempt::class, MerchantLoginAttemptPolicy::class);
+        // Gate::policy(\App\Models\Core\MerchantIdempotencyKey::class, MerchantIdempotencyKeyPolicy::class);
+        Gate::policy(\App\Models\Core\QrPaymentFeeTier::class, \App\Policies\QrPaymentFeeTierPolicy::class);
+        Gate::policy(QrPaymentRequest::class, QrPaymentRequestPolicy::class);
         
         Employee::observe(EmployeeObserver::class);
         Transaction::observe(TransactionObserver::class);

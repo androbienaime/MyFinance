@@ -37,4 +37,15 @@ class TransferDebited extends Notification implements ShouldQueue
             ],
         ];
     }
+
+    public function toMail($notifiable): \Illuminate\Notifications\Messages\MailMessage
+    {
+       return (new \Illuminate\Notifications\Messages\MailMessage)
+            ->line('Transfert debite.')
+            ->action('Montant :', number_format($this->amount, 2))
+            ->action('Vers :', $this->to->code)
+            ->action('Frais :', number_format($this->feeAmount, 2))
+            ->action('Solde :', number_format($this->from->balance, 2))
+            ->line('Merci d\'utiliser notre application!');
+    }
 }

@@ -64,7 +64,7 @@ class DepositPage extends Page implements HasSchemas, HasTable
             TransactionType::Deposit,
             TransactionType::Withdrawal,
             TransactionType::AccountSettlement,
-            TransactionType::AccountCreationFee
+            TransactionType::AccountCreationFee,
         ]);
     }
     
@@ -303,7 +303,7 @@ class DepositPage extends Page implements HasSchemas, HasTable
             );
 
             Notification::make()->title("Depot {$transaction->code} enregistre.")->success()->send();
-
+            
             $this->form->fill();
 
             // active_case_payments / account_active / case_price /
