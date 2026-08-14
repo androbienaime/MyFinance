@@ -23,5 +23,9 @@ class RegenerateCustomerActivationCodeAction
         ]);
 
         $customer->notify(new CustomerActivationCode($code));
+        
+        if(env('APP_ENV') === 'local') {
+            \Log::info("Temporary activation code : {$code} generated for customer: {$customer->id}  ");
+        }
     }
 }
