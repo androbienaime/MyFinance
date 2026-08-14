@@ -18,8 +18,8 @@ class TransactionConfirmed extends Notification implements ShouldQueue
 
     public function via($notifiable): array
     {
-        return [WhatsAppChannel::class];
-        // Tu peux combiner: return [WhatsAppChannel::class, 'mail', 'database'];
+        return ['database', WhatsAppChannel::class];
+        // On peux combiner: return [WhatsAppChannel::class, 'mail', 'database'];
     }
 
     /**
@@ -48,5 +48,26 @@ class TransactionConfirmed extends Notification implements ShouldQueue
         //     'text' => "Bonjour, votre {$type} de {$montant} sur le compte {$compte} a été confirmée. "
         //             . "Nouveau solde : {$solde}.",
         // ];
+    }
+
+    public function toArray($notifiable): array
+    {
+        return [
+            'type' => 'transaction',
+            'transaction_code' => $this->transaction->code,
+            'transaction_type' => $this->transaction->type->value,
+            'amount' => (float) $this->transaction->amount,
+            'account_code' => $this->transaction->account->code,
+            'message' => $this->buildMessage(),
+        ];
+    }
+
+    private function buildMessage(): string
+    {
+        return match ($this->transaction->type) {
+            \App\Enums\TransactionType::Deposit => "Depot de {$this->transaction->amount} HTG confirme sur le compte {$this->transaction->account->code}.",
+            \App\Enums\TransactionType::Withdrawal => "Retrait de {$this->transaction->amount} HTG confirme sur le compte {$this->transaction->account->code}.",
+            default => "Transaction {$this->transaction->code} confirmee.",
+        };
     }
 }

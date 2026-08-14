@@ -13,6 +13,8 @@ enum TransactionType: string
     case TransferFee = 'transfer_fee';
     case SettlementFee = 'settlement_fee';
     case AccountCreationFee = 'account_creation_fee';
+    case QrPayment = 'qr_payment';
+    case QrPaymentFee = 'qr_payment_fee';
 
 
 
@@ -28,6 +30,8 @@ enum TransactionType: string
             self::TransferFee => 'Frais de virement',
             self::SettlementFee => 'Frais de retrait anticipe',
             self::AccountCreationFee => 'Frais de creation de compte',
+            self::QrPayment => 'Paiement QR',
+            self::QrPaymentFee => 'Frais de paiement QR',
         };
     }
 }

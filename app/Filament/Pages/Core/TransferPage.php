@@ -62,7 +62,11 @@ class TransferPage extends Page implements HasSchemas, HasTable
 
     protected function transactionsTableScope($query): void
     {
-        $query->where('type', TransactionType::Transfer);
+        // $query->where('type', TransactionType::Transfer);
+
+        $query->whereIn('type', [
+            TransactionType::Transfer,
+        ]);
     }
 
     public ?array $data = [];
