@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Notifications\Channels\WhatsAppChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class MerchantApiCredentials extends Notification implements ShouldQueue
@@ -25,6 +26,15 @@ class MerchantApiCredentials extends Notification implements ShouldQueue
             'language' => 'fr',
             'parameters' => [$this->accountCode, $this->temporaryPassword],
         ];
+    }
+
+    public function toMail($notifiable): MailMessage
+    {
+       return (new MailMessage)
+            ->line('Vos identifiants de connexion au tableau de bord marchand.')
+            ->action('Code du compte :', $this->accountCode)
+            ->action('Mot de passe temporaire :', $this->temporaryPassword)
+            ->line('Merci d\'utiliser notre application!');
     }
 
     public function toArray($notifiable): array

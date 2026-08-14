@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Notifications\Channels\WhatsAppChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class CustomerPasswordResetOtp extends Notification implements ShouldQueue
@@ -25,5 +26,13 @@ class CustomerPasswordResetOtp extends Notification implements ShouldQueue
             'language' => 'fr',
             'parameters' => [$this->code],
         ];
+    }
+
+      public function toMail($notifiable): MailMessage
+    {
+       return (new MailMessage)
+            ->line('Code de réinitialisation de votre mot de passe.')
+            ->action('code :', $this->code)
+            ->line('Merci d\'utiliser notre application!');
     }
 }

@@ -13,6 +13,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
+use Override;
 use UnitEnum;
 
 class MerchantProfilesResource extends Resource
@@ -25,15 +27,22 @@ class MerchantProfilesResource extends Resource
 
     public static ?int $navigationSort = 4;
 
+    #[Override]
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    #[Override]
+    public static function canEdit(Model $record): bool
+    {
+        return false;
+    }
+
     public static function getNavigationGroup(): string
     {
         return __('myfinance.manage_accounts');
     }
-    public static function form(Schema $schema): Schema
-    {
-        return MerchantProfile::configure($schema);
-    }
-
     public static function table(Table $table): Table
     {
         return MerchantProfilesTable::configure($table);
@@ -50,8 +59,6 @@ class MerchantProfilesResource extends Resource
     {
         return [
             'index' => ListMerchantProfiles::route('/'),
-            'create' => CreateMerchantProfiles::route('/create'),
-            'edit' => EditMerchantProfiles::route('/{record}/edit'),
         ];
     }
 }

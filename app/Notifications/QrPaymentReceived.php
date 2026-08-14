@@ -7,6 +7,7 @@ use App\Models\Core\QrPaymentRequest;
 use App\Notifications\Channels\WhatsAppChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class QrPaymentReceived extends Notification implements ShouldQueue
@@ -27,6 +28,15 @@ class QrPaymentReceived extends Notification implements ShouldQueue
             'language' => 'fr',
             'parameters' => [number_format($this->payment->amount, 2)],
         ];
+    }
+
+    public function toMail($notifiable): MailMessage
+    {
+       return (new MailMessage)
+            ->line('Paiement QR recu.')
+            ->action('Montant :', number_format($this->payment->amount, 2))
+            ->action('Reference :', $this->payment->reference)
+            ->line('Merci d\'utiliser notre application!');
     }
 
     public function toArray($notifiable): array

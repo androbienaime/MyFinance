@@ -80,7 +80,6 @@ class MerchantProfilesTable
                         Notification::make()->title('Marchand suspendu.')->success()->send();
                     }),
 
-                EditAction::make()->visible(fn (MerchantProfile $r) => Auth::user()->can('update', $r)),
             ]);
     }
 }

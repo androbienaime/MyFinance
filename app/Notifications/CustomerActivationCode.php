@@ -33,14 +33,11 @@ class CustomerActivationCode extends Notification implements ShouldQueue
 
     public function toMail($notifiable): MailMessage
     {
-        
-        \Illuminate\Support\Facades\Log::error("[DEV] Code activation pour {$notifiable->id}: {$this->code}");
-
        return (new MailMessage)
             ->line('Code d\'activation de votre compte .')
             ->action('code :', $this->code)
-            ->line('Thank you for using our application!');
-        }
+            ->line('Merci d\'utiliser notre application!');
+    }
 
     
 }

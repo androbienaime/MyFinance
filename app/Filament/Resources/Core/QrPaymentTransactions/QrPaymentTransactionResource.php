@@ -52,6 +52,20 @@ class QrPaymentTransactionResource extends Resource
         return false;
     }
 
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false;
+    }
+    public static function canDeleteAny(): bool
+    {
+        return false;
+    }
+
     /**
      * Ne cible QUE les types lies aux paiements QR - independant du
      * scope base sur employee_id, puisque ces transactions sont
