@@ -28,7 +28,10 @@ class ApproveMerchantProfileAction
             'api_password_changed_at' => now(),
         ]);
 
-        \Illuminate\Support\Facades\Log::info('Temporary password generated for merchant profile: ' . $temporaryPassword);
+        if(env('APP_ENV') === 'local') {
+            \Log::info("Temporary password generated for merchant profile: {$profile->id}  ");
+        }
+
         $profile->account->customer?->notify(
             new MerchantApiCredentials($profile->account->code, $temporaryPassword)
         );
