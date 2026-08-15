@@ -21,6 +21,7 @@ class CustomerStatementActions
                     DatePicker::make('to')->label('Au')->default(now())->required(),
                 ]),
             ])
+            ->visible(fn (Customer $record) => auth()->user()->can('view', $record))
             ->modalSubmitActionLabel('Télécharger')
             ->action(fn (Customer $record, array $data) => redirect()->to(
                 route('statements.customer.download', ['customer' => $record->id, 'from' => $data['from'], 'to' => $data['to']])
@@ -39,6 +40,7 @@ class CustomerStatementActions
                     DatePicker::make('to')->label('Au')->default(now())->required(),
                 ]),
             ])
+            ->visible(fn (Customer $record) => auth()->user()->can('view', $record))
             ->modalSubmitActionLabel('Voir l\'aperçu')
             ->action(fn (Customer $record, array $data) => redirect()->away(
                 route('statements.customer.print', ['customer' => $record->id, 'from' => $data['from'], 'to' => $data['to']])

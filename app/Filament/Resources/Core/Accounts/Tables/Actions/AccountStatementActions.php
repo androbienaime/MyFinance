@@ -15,7 +15,7 @@ class AccountStatementActions
             ->label('Télécharger le relevé (PDF)')
             ->icon('heroicon-o-arrow-down-tray')
             ->color('gray')
-            ->visible(fn () => auth()->user()->can('view', \App\Models\Core\Account::class))
+            ->visible(fn (Account $record) => auth()->user()->can('view', $record))
             ->schema([
                 Grid::make(2)->schema([
                     DatePicker::make('from')->label('Du')->default(now()->subMonth())->required(),
@@ -34,7 +34,7 @@ class AccountStatementActions
             ->label('Aperçu / Imprimer')
             ->icon('heroicon-o-printer')
             ->color('gray')
-            ->visible(fn () => auth()->user()->can('view', \App\Models\Core\Account::class))
+            ->visible(fn (Account $record) => auth()->user()->can('view', $record))
             ->schema([
                 Grid::make(2)->schema([
                     DatePicker::make('from')->label('Du')->default(now()->subMonth())->required(),

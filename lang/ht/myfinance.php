@@ -37,6 +37,18 @@ return [
     "p2p_transfer_requests" => "Demann transfè P2P",
     "permission_level_requirements" => "Egzijans pou nivo otorizasyon",
     "role_assignment_logs" => "Jounal atribisyon wòl yo",
-
+    'first_name' => 'Non',
+    'last_name' => 'Siyati',
+    'gender' => 'Sèks',
+    'document_type' => 'Kalite dokiman',
+    'document_number' => 'Nimewo dokiman',
+    'country' => 'Peyi',
+    'state' => 'Depatman',
+    'city' => 'Vil',
+    'address1' => 'Adrès 1',
+    'phone' => 'Nimewo telefòn',
+    'email' => 'Imèl',
+    'identity_documents' => 'Dokiman idantite',
+    'phone_code' => 'Kòd telefòn',
 
 ];

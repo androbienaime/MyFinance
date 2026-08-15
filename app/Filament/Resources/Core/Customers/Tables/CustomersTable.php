@@ -16,6 +16,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class CustomersTable
 {
@@ -26,30 +27,40 @@ class CustomersTable
                 // TextColumn::make('code')
                 //     ->searchable(),
                 TextColumn::make('person.full_name')
-                    ->label(__('Full name'))
-                    ->searchable(),
+                    ->label(__('myfinance.full_name'))
+                     ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->orWhereHas('person', function (Builder $q) use ($search) {
+                            $q->where('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%")
+                            ->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", ["%{$search}%"]);
+                        })
+                        ->orWhere('phone_number', 'like', "%{$search}%");
+                    }),
                 TextColumn::make('person.gender')
-                    ->label(__('gender'))
+                    ->label(__('myfinance.gender'))
                     ->searchable(),
                 TextColumn::make('person.identityDocuments.document_number')
-                    ->label(__('identity number'))
+                    ->label(__('myfinance.document_number'))
+                    ->toggleable(isToggledHiddenByDefault: false)
                     ->searchable(),
                 TextColumn::make('person.addresses.phone')
-                    ->label(__('Phone Number'))
+                    ->label(__('myfinance.phone_number'))
                     ->searchable(),
                 TextColumn::make('accounts_count')
                     ->badge()
                     ->counts('accounts')
-                    ->label(__('Number of accounts')),
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->label(__('myfinance.number_of_accounts')),
                 IconColumn::make('is_online')
-                ->label('Acces en ligne')
+                ->label(__('myfinance.online_access'))
                 ->boolean(),
                 TextColumn::make('employee.fullname')
-                    ->label(__('Employee'))
+                    ->label(__('myfinance.employee'))
                     ->searchable()
                     ->visible(auth()->user()->isSuperAdmin()),
                 TextColumn::make('person.addresses.city.name')
-                    ->label(__('City'))
+                    ->label(__('myfinance.city'))
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->searchable(),
                 TextColumn::make('deleted_at')
                     ->dateTime()
