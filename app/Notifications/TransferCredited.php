@@ -35,4 +35,14 @@ class TransferCredited extends Notification implements ShouldQueue
             ],
         ];
     }
+
+    public function toMail($notifiable): \Illuminate\Notifications\Messages\MailMessage
+    {
+       return (new \Illuminate\Notifications\Messages\MailMessage)
+            ->line('Transfert credite.')
+            ->action('Montant :', number_format($this->amount, 2))
+            ->action('De :', $this->from->code)
+            ->action('Solde :', number_format($this->to->balance, 2))
+            ->line('Merci d\'utiliser notre application!');
+    }
 }

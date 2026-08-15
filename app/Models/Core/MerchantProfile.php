@@ -1,18 +1,17 @@
 <?php
 
-// app/Models/Core/MerchantProfile.php
 namespace App\Models\Core;
 
 use App\Enums\MerchantStatus;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 class MerchantProfile extends Authenticatable
 {
-    // use HasApiTokens; 
-    use Notifiable;
+    use HasApiTokens, Notifiable;
 
     protected $fillable = [
         'account_id', 'business_name', 'category', 'business_registration_number',
@@ -44,14 +43,31 @@ class MerchantProfile extends Authenticatable
         return $this->belongsTo(\App\Models\User::class, 'approved_by');
     }
 
+    public function apiKeys(): HasMany
+    {
+        return $this->hasMany(MerchantApiKey::class);
+    }
+
+    public function activeApiKeysCount(): int
+    {
+        return $this->apiKeys()->where('is_active', true)->count();
+    }
+
     public function isActive(): bool
     {
         return $this->status === MerchantStatus::Active;
     }
 
-    public function transactionFeePercentage(): float
+ 
+
+    public function transactionFeePercentage(float $amount): float
     {
-        return (float) ($this->transaction_fee_percentage
-            ?? setting('merchants.default_transaction_fee_percentage', 0));
+        // Override manuel sur le marchand : prioritaire sur tout le reste,
+        // pour un ajustement ponctuel sans toucher aux paliers.
+        if (! is_null($this->transaction_fee_percentage)) {
+            return (float) $this->transaction_fee_percentage;
+        }
+
+        return QrPaymentFeeTier::percentageFor($this->id, $amount);
     }
 }

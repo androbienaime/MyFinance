@@ -4,12 +4,14 @@ namespace App\Filament\Resources\Core\Customers\Tables;
 
 use App\Filament\Actions\GuardedDeleteAction;
 use App\Filament\Actions\GuardedDeleteBulkAction;
+use App\Filament\Resources\Core\Customers\Tables\Actions\EnableCustomerOnlineAccessAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
@@ -20,8 +22,8 @@ class CustomersTable
     {
         return $table
             ->columns([
-                TextColumn::make('code')
-                    ->searchable(),
+                // TextColumn::make('code')
+                //     ->searchable(),
                 TextColumn::make('person.full_name')
                     ->label(__('Full name'))
                     ->searchable(),
@@ -38,10 +40,13 @@ class CustomersTable
                     ->badge()
                     ->counts('accounts')
                     ->label(__('Number of accounts')),
-                
-                TextColumn::make('employee.first_name')
+                IconColumn::make('is_online')
+                ->label('Acces en ligne')
+                ->boolean(),
+                TextColumn::make('employee.fullname')
                     ->label(__('Employee'))
-                    ->searchable(),
+                    ->searchable()
+                    ->visible(auth()->user()->isSuperAdmin()),
                 TextColumn::make('person.addresses.city.name')
                     ->label(__('City'))
                     ->searchable(),
@@ -63,6 +68,7 @@ class CustomersTable
             ])
             ->recordActions([
                 EditAction::make(),
+                EnableCustomerOnlineAccessAction::make(),
                 GuardedDeleteAction::make(),
             ])
             ->toolbarActions([
