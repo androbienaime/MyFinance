@@ -49,16 +49,20 @@ class CustomerForm
                                 ->columns(2)
                                 ->schema([
                                     TextInput::make('first_name')
+                                        ->label(__('myfinance.first_name'))
                                         ->required(),
                                     TextInput::make('last_name')
+                                        ->label(__('myfinance.last_name'))
                                         ->required(),
                                     Select::make('gender')
+                                        ->label(__('myfinance.gender'))
                                         ->options([
                                             'male' => 'Masculin',
                                             'female' => 'Feminin',
                                         ])
                                     ->default(fn () => 'male'),
                             Repeater::make('identityDocuments')
+                                ->label(__('myfinance.identity_documents'))
                                 ->relationship('identityDocuments')
                                 ->schema([
                                     Grid::make()
@@ -68,7 +72,7 @@ class CustomerForm
                                                 ->columns(5)
                                                 ->schema([
                                                     Select::make('document_type')
-                                                        ->label(__('Document type'))
+                                                        ->label(__('myfinance.document_type'))
                                                         ->options([
                                                             'NIF' => 'NIF',
                                                             'NINU' => 'NINU',
@@ -83,7 +87,7 @@ class CustomerForm
                                                         ->afterStateUpdated(fn (callable $set) => $set('state_id', null)),
                                                 
                                                     TextInput::make('document_number')
-                                                        ->label(__('Document number'))
+                                                        ->label(__('myfinance.document_number'))
                                                         ->required()
                                                               ->live(onBlur:true)
                                                         ->placeholder(fn (Get $get) => match ($get('document_type')) {
@@ -125,7 +129,7 @@ class CustomerForm
                                         ->columns(2)
                                         ->schema([
                                             Select::make('country_id')
-                                                ->label('Country')
+                                                ->label(__('myfinance.country'))
                                                 ->options(fn () => Country::all()->pluck('name', 'id'))
                                                 ->default(fn () => Country::where("name", "Haiti")->first()->id)
                                                 ->preload()
@@ -134,7 +138,7 @@ class CustomerForm
                                                 ->afterStateUpdated(fn (callable $set) => $set('state_id', null)),
 
                                             Select::make('state_id')
-                                                ->label('State')
+                                                ->label(__('myfinance.state'))
                                                 ->options(fn (callable $get) => State::where('country_id', $get('country_id'))
                                                     ->pluck('name', 'id')
                                                     ->toArray())
@@ -144,7 +148,7 @@ class CustomerForm
                                                 ->afterStateUpdated(fn (callable $set) => $set('city_id', null)),
 
                                             Select::make('city_id')
-                                                ->label('City')
+                                                ->label(__('myfinance.city'))
                                                 ->options(fn (callable $get) => City::where('state_id', $get('state_id'))
                                                     ->pluck('name', 'id')
                                                     ->toArray())
@@ -152,9 +156,9 @@ class CustomerForm
                                                 ->live()
                                                 ->searchable(),
 
-                                            TextInput::make('address1')->label('Address 1'),
-                                            TextInput::make('phone')->label('Phone'),
-                                            TextInput::make('email')->label('Email'),
+                                            TextInput::make('address1')->label(__('myfinance.address1')),
+                                            TextInput::make('phone')->label(__('myfinance.phone')),
+                                            TextInput::make('email')->label(__('myfinance.email')),
                                         ]),
                                 ])
                                 ->columns(1)

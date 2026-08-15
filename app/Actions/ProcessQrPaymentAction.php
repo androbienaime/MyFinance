@@ -22,7 +22,6 @@ class ProcessQrPaymentAction
 
     public function handle(string $reference, Customer $customer, string $payingAccountCode, ?string $pin = null): QrPaymentRequest
     {
-        
         return DB::transaction(function () use ($reference, $customer, $payingAccountCode, $pin) {
             $paymentRequest = QrPaymentRequest::where('reference', $reference)
                 ->lockForUpdate()
@@ -83,7 +82,6 @@ class ProcessQrPaymentAction
 
             // Montants figes sur la demande, exprimes dans la devise du
             // marchand (voir GenerateQrPaymentRequestAction).
-      
             $amountInMerchantCurrency = (float) $paymentRequest->amount;
             $feeInMerchantCurrency = (float) $paymentRequest->fee_amount;
             $totalInMerchantCurrency = (float) $paymentRequest->total_amount;
@@ -114,14 +112,11 @@ class ProcessQrPaymentAction
                 throw new TransactionRejectedException('Solde disponible insuffisant.');
             }
 
-            if ($totalToDebit > $payingAccount->availableBalance()) {
-                throw new TransactionRejectedException('Solde disponible insuffisant.');
-            }
-
             $feesAccount = null;
 
             if ($feeToDebit > 0) {
                 $feesAccount = Account::where('code', setting('financial.fees_account_code'))
+                    ->with('currency')
                     ->lockForUpdate()
                     ->first();
 
@@ -155,23 +150,6 @@ class ProcessQrPaymentAction
         });
     }
 
-    /**
-     * Taux pour convertir un montant exprime dans $from vers $to, en
-     * passant par la devise par defaut du systeme comme pivot - meme
-     * convention que exchange_rate ailleurs dans MyFinance (toujours
-     * relatif a la devise par defaut).
-     */
-    private function exchangeRate(Currency $from, Currency $to): float
-    {
-        $default = Currency::default();
-
-        $fromRateToDefault = $from->id === $default->id ? 1.0 : (float) $from->exchange_rate;
-        $toRateToDefault = $to->id === $default->id ? 1.0 : (float) $to->exchange_rate;
-
-        // Montant en devise par defaut, puis reconverti vers $to.
-        return $fromRateToDefault / $toRateToDefault;
-    }
-
     private function createLegsAndApplyBalances(
         Account $payingAccount,
         Account $merchantAccount,
@@ -184,6 +162,7 @@ class ProcessQrPaymentAction
         $debitMain = Transaction::create([
             'account_id' => $payingAccount->id,
             'counterparty_account_id' => $merchantAccount->id,
+            'currency_id' => $payingAccount->currency_id,
             'direction' => TransactionDirection::Debit,
             'code' => Transaction::generateUniqueCode(),
             'amount' => $amountToDebit,
@@ -196,6 +175,7 @@ class ProcessQrPaymentAction
         Transaction::create([
             'account_id' => $merchantAccount->id,
             'counterparty_account_id' => $payingAccount->id,
+            'currency_id' => $merchantAccount->currency_id,
             'direction' => TransactionDirection::Credit,
             'code' => Transaction::generateUniqueCode(),
             'amount' => $amountToCredit,
@@ -212,6 +192,7 @@ class ProcessQrPaymentAction
             Transaction::create([
                 'account_id' => $payingAccount->id,
                 'counterparty_account_id' => $feesAccount->id,
+                'currency_id' => $payingAccount->currency_id,
                 'direction' => TransactionDirection::Debit,
                 'code' => Transaction::generateUniqueCode(),
                 'amount' => $feeToDebit,
@@ -223,6 +204,7 @@ class ProcessQrPaymentAction
             Transaction::create([
                 'account_id' => $feesAccount->id,
                 'counterparty_account_id' => $payingAccount->id,
+                'currency_id' => $feesAccount->currency_id,
                 'direction' => TransactionDirection::Credit,
                 'code' => Transaction::generateUniqueCode(),
                 'amount' => $feeToDebit,
