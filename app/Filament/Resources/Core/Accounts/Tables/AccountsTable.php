@@ -6,6 +6,7 @@ use App\Actions\AccountRestorationAction;
 use App\Exceptions\TransactionRejectedException;
 use App\Filament\Actions\GuardedDeleteAction;
 use App\Filament\Actions\GuardedDeleteBulkAction;
+use App\Filament\Resources\Core\Accounts\Tables\Actions\AccountStatementActions;
 use App\Models\Core\Account;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -91,7 +92,10 @@ class AccountsTable
                             ->danger()
                             ->send();
                     }
-                })
+                }),                
+                AccountStatementActions::print(),
+                AccountStatementActions::download(),
+
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

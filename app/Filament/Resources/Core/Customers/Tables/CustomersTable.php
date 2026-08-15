@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Core\Customers\Tables;
 
 use App\Filament\Actions\GuardedDeleteAction;
 use App\Filament\Actions\GuardedDeleteBulkAction;
+use App\Filament\Resources\Core\Customers\Tables\Actions\CustomerStatementActions;
 use App\Filament\Resources\Core\Customers\Tables\Actions\EnableCustomerOnlineAccessAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -70,6 +71,8 @@ class CustomersTable
                 EditAction::make(),
                 EnableCustomerOnlineAccessAction::make(),
                 GuardedDeleteAction::make(),
+                CustomerStatementActions::download(),
+                CustomerStatementActions::print(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
