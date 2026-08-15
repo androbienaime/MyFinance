@@ -109,6 +109,8 @@ return [
     'online_access' => 'Online Access',
     'number_of_accounts' => 'Number of Accounts',
     'full_name' => 'Full Name',
+    'phone_number' => 'Phone Number',
+    'currency'=> 'Currency',
 
     
 ];

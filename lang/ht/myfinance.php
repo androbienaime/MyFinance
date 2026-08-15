@@ -50,5 +50,6 @@ return [
     'email' => 'Imèl',
     'identity_documents' => 'Dokiman idantite',
     'phone_code' => 'Kòd telefòn',
+    
 
 ];
