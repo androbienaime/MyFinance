@@ -7,6 +7,7 @@ enum ReportStatus: string
     case Pending = 'pending';
     case Reviewed = 'reviewed';
     case Archived = 'archived';
+    case Draft = 'draft';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum ReportStatus: string
             self::Pending => 'En attente',
             self::Reviewed => 'Revu',
             self::Archived => 'Archive',
+            self::Draft => "Brouillon",
         };
     }
 
@@ -23,6 +25,7 @@ enum ReportStatus: string
             self::Pending => 'warning',
             self::Reviewed => 'success',
             self::Archived => 'gray',
+            self::Draft => "gray",
         };
     }
 }

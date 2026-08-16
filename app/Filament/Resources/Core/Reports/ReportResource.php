@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Core\Reports;
 
+use App\Enums\ReportStatus;
 use App\Filament\Resources\Core\Reports\Pages\CreateReport;
 use App\Filament\Resources\Core\Reports\Pages\DailyClosingReports;
 use App\Filament\Resources\Core\Reports\Pages\EditReport;
@@ -77,18 +78,58 @@ class ReportResource extends Resource
      */
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
         $user = auth()->user();
+        $employeeId = $user->employee?->id;
 
-        if (! $user || $user->isHeadOffice()) {
-            return $query;
+        return parent::getEloquentQuery()->where(function (Builder $query) use ($user, $employeeId) {
+            // Brouillons : uniquement le createur, ou quiconque a la
+            // permission d'audit dediee - jamais concerne par le scope
+            // all/branch/own ci-dessous.
+            $query->where(function (Builder $q) use ($user, $employeeId) {
+                $q->where('status', ReportStatus::Draft->value);
+
+                if ($user->can('reports.view_all_drafts')) {
+                    return; // aucune restriction supplementaire pour cet utilisateur
+                }
+
+                $q->where('employee_id', $employeeId);
+            });
+
+            // Rapports soumis : reutilise le scope existant all/branch/own
+            // (voir HasReportsScope), jamais applique aux brouillons.
+            $query->orWhere(function (Builder $q) use ($user, $employeeId) {
+                $q->where('status', '!=', ReportStatus::Draft->value);
+                static::applyNonDraftScope($q, $user, $employeeId);
+            });
+        });
+    }
+
+    /**
+     * Meme convention que HasReportsScope (dashboard) : all > branch > own.
+     * Si l'utilisateur n'a aucune de ces permissions, aucun rapport soumis
+     * ne lui est visible (deny par defaut).
+     */
+    protected static function applyNonDraftScope(Builder $query, $user, ?int $employeeId): void
+    {
+        if ($user->can('reports.view.all')) {
+            return; // aucune restriction
         }
 
-        if ($user->can('reports.view') || $user->can('reports.manage')) {
-            return $query->where('branch_id', $user->currentBranchId());
+        if ($user->can('reports.view.branch')) {
+            $branchId = $user->currentBranchId();
+
+            $query->whereHas('employee', fn ($q) => $q->where('branch_id', $branchId));
+            return;
         }
 
-        return $query->where('employee_id', $user->employee?->id);
+        if ($user->can('reports.view.own')) {
+            $query->where('employee_id', $employeeId);
+            return;
+        }
+
+        // Aucune permission de visualisation : deny explicite, pas de
+        // fallback silencieux qui laisserait tout passer par erreur.
+        $query->whereRaw('1 = 0');
     }
 
     public static function getNavigationBadge(): ?string

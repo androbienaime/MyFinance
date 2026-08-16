@@ -119,4 +119,9 @@ return [
     'holder_type' => 'Type de titulaire',
     'online_access' => 'Acces en ligne',
     'number_of_accounts' => 'Nombre de comptes',
+    'date_of_birth' => 'Date de naissance',
+    'place_of_birth' => 'Lieu de naissance',
+    'nationality' => 'Nationalite',
+    'marital_status' => 'Situation matrimoniale',
+    'occupation' => 'Profession',
 ];

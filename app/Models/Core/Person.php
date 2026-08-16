@@ -17,6 +17,11 @@ class Person extends Model implements Deletable
         'first_name',
         'gender',
         'employee_id',
+        'date_of_birth',
+        'marital_status',
+        'place_of_birth',
+        'occupation',
+        'nationality'
     ];
 
     protected $appends = [

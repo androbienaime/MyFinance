@@ -111,6 +111,12 @@ return [
     'full_name' => 'Full Name',
     'phone_number' => 'Phone Number',
     'currency'=> 'Currency',
+    'holder_type' => 'Holder Type',
+    'date_of_birth' => 'Date of Birth',
+    'place_of_birth' => 'Place of Birth',
+    'nationality' => 'Nationality',
+    'marital_status' => 'Marital Status',
+    'occupation' => 'Occupation',
 
     
 ];
