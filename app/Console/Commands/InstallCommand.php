@@ -23,8 +23,9 @@ class InstallCommand extends Command
         $this->components->info('Installation de MyFinance');
         $this->ensureEnvFile();
         $this->ensureAppKey();
-        $this->call('optimize'); // seulement une fois la clé garantie
+        $this->ensureCacheTableMigration();
         $this->runMigrations();
+        $this->call('optimize'); // apres les migrations, pour eviter toute dependance a une table pas encore creee
         $this->runSeeders();
         $this->publishFilamentAssets();
         
@@ -109,5 +110,23 @@ class InstallCommand extends Command
         $this->newLine();
         $this->components->warn('Lancez maintenant la commande suivante pour creer votre utilisateur :');
         $this->line('    php artisan myfinance:make-user');
+    }
+
+    private function ensureCacheTableMigration(): void
+    {
+        if (config('cache.default') !== 'database') {
+            return;
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('cache')) {
+            return;
+        }
+
+        $this->components->task('Creation de la table cache', function () {
+            Artisan::call('cache:table');
+            Artisan::call('migrate', ['--force' => true, '--path' => 'database/migrations']);
+
+            return true;
+        });
     }
 }

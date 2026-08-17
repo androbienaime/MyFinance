@@ -75,20 +75,37 @@ class SettingsManager
 
     protected function allCached(): array
     {
-        return Cache::rememberForever('settings.all', function () {
-            $rows = Setting::all();
-            $result = ['global' => [], 'branch' => []];
-
-            foreach ($rows as $row) {
-                if ($row->branch_id) {
-                    $result['branch'][$row->branch_id][$row->key] = $row->value;
-                } else {
-                    $result['global'][$row->key] = $row->value;
-                }
+        try {
+            return Cache::rememberForever('settings.all', function () {
+                return $this->loadFromDatabase();
+            });
+        } catch (\Illuminate\Database\QueryException $e) {
+            // La table cache et/ou settings n'existe pas encore (ex: avant les
+            // migrations, notamment pendant myfinance:install). On retombe sur
+            // un chargement direct sans mise en cache plutot que de faire
+            // planter tout le boot de l'application.
+            try {
+                return $this->loadFromDatabase();
+            } catch (\Illuminate\Database\QueryException $e2) {
+                return ['global' => [], 'branch' => []];
             }
+        }
+    }
 
-            return $result;
-        });
+    protected function loadFromDatabase(): array
+    {
+        $rows = Setting::all();
+        $result = ['global' => [], 'branch' => []];
+
+        foreach ($rows as $row) {
+            if ($row->branch_id) {
+                $result['branch'][$row->branch_id][$row->key] = $row->value;
+            } else {
+                $result['global'][$row->key] = $row->value;
+            }
+        }
+
+        return $result;
     }
 
     public function definitionFor(string $key): ?array
