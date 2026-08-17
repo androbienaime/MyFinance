@@ -20,11 +20,16 @@ class ReportPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('reports.view_any') || $user->can('reports.create');
+        return $user->can('reports.view_any');
     }
 
     public function view(User $user, Report $report): bool
     {
+        if ($report->status === ReportStatus::Draft) {
+            return $report->employee_id === $user->employee?->id
+                || $user->can('reports.view_all_drafts'); // admins/superviseurs, permission dediee
+        }
+
         if ($user->can('reports.view')) {
             return true;
         }

@@ -8,6 +8,7 @@ use App\Models\Core\Country;
 use App\Models\Core\Currency;
 use App\Models\Core\State;
 use App\Models\Core\TypeOfAccount;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -119,9 +120,20 @@ class CustomerForm
                                 ->columns(1)
                                 ->collapsible()
                                 ->itemLabel(fn (array $state): ?string => $state['document_type'] . ':'.$state['document_number'] ?? null),
-                                
+                            
+                            DatePicker::make("date_of_birth")
+                                ->label(__("myfinance.date_of_birth"))
+                                ->maxDate(now()->subYears(5)),
+                            Select::make("marital_status")
+                                ->label(__("myfinance.marital_status"))
+                                ->options([
+                                    'single' => 'Célibataire',
+                                    'married' => 'Marié(e)',
+                                    'divorced' => 'Divorcé(e)',
+                                    'widowed' => 'Veuf(ve)',
+                                ]),
                             ]),
-                        
+                            
                             Repeater::make('addresses')
                                 ->relationship('addresses')
                                 ->schema([

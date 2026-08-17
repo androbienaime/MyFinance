@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
@@ -29,6 +30,18 @@ class ReportForm
     {
         return $schema
             ->components([
+                Section::make("infos")
+                ->schema([
+                    \Filament\Schemas\Components\Text::make(
+                        fn ($record) => $record?->status === ReportStatus::Draft
+                            ? ($record ? '📝 Ce rapport est en brouillon.' : null)
+                            : '⚠️ Ce rapport a été soumis, il n\'est plus modifiable.'
+
+                    )
+                ])
+                ->dehydrated(true)
+                ->visible(fn ($record) => $record !== null)
+                ->columnSpanFull(),
                 Select::make('category')
                         ->label('Categorie')
                         ->options(ReportCategory::manualOptions())
@@ -36,11 +49,11 @@ class ReportForm
                         ->native(false),
                 TextInput::make('title')
                     ->required(),
-                Textarea::make('content')
+                RichEditor::make('content')
                         ->label('Contenu du rapport')
                         ->required()
                         ->minLength(10)
-                        ->rows(8)
+                        // ->rows(8)
                         ->columnSpanFull(),
 
                 Grid::make(2)
