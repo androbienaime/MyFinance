@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Core\SystemUpdate;
 use App\Support\Updates\HasTrackedSeeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -25,5 +26,6 @@ class RolePermissionSeeder extends Seeder
         $this->callTracked(ReportPermissionSeeder::class);
         $this->callTracked(MerchantProfileSeeder::class);
         $this->callTracked(MerchantAndCustomerProfilePermissionSeeder::class);
+        $this->callTracked(SystemUpdateSeeder::class);
     }
 }

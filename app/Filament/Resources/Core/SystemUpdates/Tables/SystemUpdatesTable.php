@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Core\SystemUpdates\Tables;
 
+use App\Filament\Resources\Core\SystemUpdates\Tables\Actions\RunSystemUpdateAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -31,6 +32,10 @@ class SystemUpdatesTable
             ])
             ->filters([
                 //
+            ])
+            ->headerActions([
+                RunSystemUpdateAction::make(),
+                RunSystemUpdateAction::viewConsole(),
             ])
             ->recordActions([
                 EditAction::make(),
