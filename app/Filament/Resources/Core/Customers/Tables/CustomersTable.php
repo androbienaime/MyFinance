@@ -28,13 +28,13 @@ class CustomersTable
                 //     ->searchable(),
                 TextColumn::make('person.full_name')
                     ->label(__('myfinance.full_name'))
-                     ->searchable(query: function (Builder $query, string $search): Builder {
+                    ->searchable(query: function (Builder $query, string $search): Builder {
                         return $query->orWhereHas('person', function (Builder $q) use ($search) {
                             $q->where('first_name', 'like', "%{$search}%")
                             ->orWhere('last_name', 'like', "%{$search}%")
-                            ->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", ["%{$search}%"]);
-                        })
-                        ->orWhere('phone_number', 'like', "%{$search}%");
+                            ->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", ["%{$search}%"])
+                            ->orWhere('phone_number', 'like', "%{$search}%");;
+                        });
                     }),
                 TextColumn::make('person.gender')
                     ->label(__('myfinance.gender'))
@@ -56,7 +56,7 @@ class CustomersTable
                 ->boolean(),
                 TextColumn::make('employee.fullname')
                     ->label(__('myfinance.employee'))
-                    ->searchable()
+                    // ->searchable()
                     ->visible(auth()->user()->isSuperAdmin()),
                 TextColumn::make('person.addresses.city.name')
                     ->label(__('myfinance.city'))
