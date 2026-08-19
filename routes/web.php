@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\StatementController;
+use App\Http\Controllers\SystemUpdateLogController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -32,6 +33,9 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     Route::get('/statements/customer/{customer}/download', [StatementController::class, 'downloadCustomerPdf'])
         ->name('statements.customer.download');
+
+    Route::get('/system-updates/log', SystemUpdateLogController::class)
+        ->name('system-updates.log');
 });
 
 

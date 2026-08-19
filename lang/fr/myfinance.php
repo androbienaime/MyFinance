@@ -124,4 +124,5 @@ return [
     'nationality' => 'Nationalite',
     'marital_status' => 'Situation matrimoniale',
     'occupation' => 'Profession',
+    'update' => 'Mise à jour'
 ];
