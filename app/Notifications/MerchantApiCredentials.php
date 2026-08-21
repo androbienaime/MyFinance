@@ -16,7 +16,14 @@ class MerchantApiCredentials extends Notification implements ShouldQueue
 
     public function via($notifiable): array
     {
-        return ['database', 'mail', WhatsAppChannel::class];
+        $channels = ['database'];
+        if(!empty($notifiable->email)) {
+            $channels[] = 'mail';
+        }
+        if(!empty($notifiable->phone_number)) {
+            $channels[] = WhatsAppChannel::class;
+        }
+        return $channels;
     }
 
     public function toWhatsApp($notifiable): array

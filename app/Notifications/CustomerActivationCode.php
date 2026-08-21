@@ -16,7 +16,16 @@ class CustomerActivationCode extends Notification implements ShouldQueue
 
     public function via($notifiable): array
     {
-        return ['mail', WhatsAppChannel::class];
+        $channels = [];
+        if(!empty($notifiable->email)) {
+            $channels[] = 'mail';
+        }
+        
+        if(!empty($notifiable->phone_number)) {
+            $channels[] = WhatsAppChannel::class;
+        }
+
+        return $channels;
     }
 
     public function toWhatsApp($notifiable): array

@@ -18,8 +18,14 @@ class TransactionConfirmed extends Notification implements ShouldQueue
 
     public function via($notifiable): array
     {
-        return ['database', 'mail', WhatsAppChannel::class];
-        // On peux combiner: return [WhatsAppChannel::class, 'mail', 'database'];
+        $channels = ['database'];
+        if(!empty($notifiable->email)) {
+            $channels[] = 'mail';
+        }
+        if(!empty($notifiable->phone_number)) {
+            $channels[] = WhatsAppChannel::class;
+        }
+        return $channels;
     }
 
     /**

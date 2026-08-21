@@ -20,7 +20,14 @@ class TransferCredited extends Notification implements ShouldQueue
 
     public function via($notifiable): array
     {
-        return [WhatsAppChannel::class, 'mail'];
+        $channels = [];
+        if(!empty($notifiable->email)) {
+            $channels[] = 'mail';
+        }
+        if(!empty($notifiable->phone_number)) {
+            $channels[] = WhatsAppChannel::class;
+        }
+        return $channels;
     }
 
     public function toWhatsApp($notifiable): array
