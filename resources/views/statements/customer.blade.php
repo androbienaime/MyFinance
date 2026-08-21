@@ -183,10 +183,12 @@
 
         <div class="header">
             <div class="brand">
-                <div class="brand-mark">MF</div>
-                <div>
+            <div class="brand-mark">
+                <img src="{{ asset('images/logo.png') }}" alt="{{ env('APP_NAME') }}" class="brand-logo">
+            </div>                
+            <div>
                     <h1>Relevé bancaire</h1>
-                    <p class="brand-sub">MyFinance</p>
+                    <p class="brand-sub">{{ env('APP_NAME') }}</p>
                 </div>
             </div>
             <div class="meta-right">
@@ -239,7 +241,7 @@
         @endforeach
 
         <div class="footer">
-            Document généré automatiquement par MyFinance — {{ $generatedAt->format('d/m/Y H:i') }}
+            Document généré automatiquement par {{ env('APP_NAME') }} — {{ $generatedAt->format('d/m/Y H:i') }}
         </div>
 
     </div>

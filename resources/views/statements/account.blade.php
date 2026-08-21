@@ -58,7 +58,7 @@
             width: 34px;
             height: 34px;
             border-radius: 8px;
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            /* background: linear-gradient(135deg, #2563eb, #1d4ed8); */
             color: #fff;
             font-weight: bold;
             font-size: 15px;
@@ -234,10 +234,12 @@
 
         <div class="header">
             <div class="brand">
-                <div class="brand-mark">MF</div>
+                <div class="brand-mark">
+                    <img src="{{ asset('images/logo.png') }}" alt="{{ env('APP_NAME') }}" class="brand-logo" width="68" height="68">
+                </div>
                 <div>
                     <h1>Relevé de compte</h1>
-                    <p class="brand-sub">MyFinance</p>
+                    <p class="brand-sub">{{ env('APP_NAME') }}</p>
                 </div>
             </div>
             <div class="meta-right">
@@ -328,7 +330,7 @@
         @endif
 
         <div class="footer">
-            Document généré automatiquement par MyFinance — {{ $generatedAt->format('d/m/Y H:i') }}
+            Document généré automatiquement par {{ env('APP_NAME') }} — {{ $generatedAt->format('d/m/Y H:i') }}
         </div>
 
     </div>
