@@ -182,13 +182,6 @@ class CustomerForm
                     ->description('Un compte est obligatoirement cree avec le client.')
                     ->columns(2)
                     ->schema([
-                        // Select::make('type_of_account_id')
-                        //     ->label('Type de compte')
-                        //     ->options(TypeOfAccount::pluck('name', 'id'))
-                        //     ->searchable()
-                        //     ->required()
-                        //     ->native(false),
-
             Select::make('type_of_account_id')
                 ->label('Type de compte')
                 ->relationship(
@@ -334,6 +327,12 @@ class CustomerForm
 
                             TextInput::make('phone_number')
                                 ->label(__("myfinance.phone")),
+                            TextInput::make('email')
+                            ->label('Email Principale')
+                            ->email()
+                            ->unique(ignoreRecord: true)
+                            ->nullable()
+                            ->maxLength(255),
                         ])->columnSpanFull()
                 ])
             ])->columns(4);
