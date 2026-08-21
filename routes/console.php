@@ -24,3 +24,5 @@ Schedule::command(UpdateCurrencyRatesCommand::class)
         \Illuminate\Support\Facades\Log::channel('security')
             ->warning('myfinance:update-currency-rates a échoué — vérifier les taux de change.');
     }); // optionnel, si tu as un email d'alerte configure
+
+Schedule::command('queue:work --stop-when-empty')->everyMinute();

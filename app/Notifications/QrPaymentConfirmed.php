@@ -37,8 +37,8 @@ class QrPaymentConfirmed extends Notification implements ShouldQueue
     {
        return (new MailMessage)
             ->line('Paiement QR confirme.')
-            ->action('Montant :', number_format($this->payment->total_amount, 2))
-            ->action('Marchand :', $this->merchant->business_name)
+            ->line('Montant : ' . number_format($this->payment->total_amount, 2))
+            ->line('Marchand : ' . $this->merchant->business_name)
             ->line('Merci d\'utiliser notre application!');
     }
     public function toArray($notifiable): array

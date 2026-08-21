@@ -28,11 +28,13 @@ class CustomerPasswordResetOtp extends Notification implements ShouldQueue
         ];
     }
 
-      public function toMail($notifiable): MailMessage
+
+    public function toMail($notifiable): MailMessage
     {
-       return (new MailMessage)
+        return (new MailMessage)
             ->line('Code de réinitialisation de votre mot de passe.')
-            ->action('code :', $this->code)
+            ->line('Votre code : ' . $this->code)
+            ->action('Réinitialiser mon mot de passe', url('/customer/reset-password'))
             ->line('Merci d\'utiliser notre application!');
     }
 }

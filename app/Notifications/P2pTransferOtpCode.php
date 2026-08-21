@@ -43,7 +43,7 @@ class P2pTransferOtpCode extends Notification implements ShouldQueue
     {
        return (new MailMessage)
             ->line('Code de transfert P2P.')
-            ->action('code :', $this->code)
+            ->line('code : ' . $this->code)
             ->line('Merci d\'utiliser notre application!');
     }
 }

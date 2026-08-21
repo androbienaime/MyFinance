@@ -42,10 +42,10 @@ class TransferDebited extends Notification implements ShouldQueue
     {
        return (new \Illuminate\Notifications\Messages\MailMessage)
             ->line('Transfert debite.')
-            ->action('Montant :', number_format($this->amount, 2))
-            ->action('Vers :', $this->to->code)
-            ->action('Frais :', number_format($this->feeAmount, 2))
-            ->action('Solde :', number_format($this->from->balance, 2))
+            ->line('Montant : ' . number_format($this->amount, 2))
+            ->line('Vers : ' . $this->to->code)
+            ->line('Frais : ' . number_format($this->feeAmount, 2))
+            ->line('Solde : ' . number_format($this->from->balance, 2))
             ->line('Merci d\'utiliser notre application!');
     }
 }

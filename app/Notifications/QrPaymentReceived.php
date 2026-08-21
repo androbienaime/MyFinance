@@ -34,8 +34,8 @@ class QrPaymentReceived extends Notification implements ShouldQueue
     {
        return (new MailMessage)
             ->line('Paiement QR recu.')
-            ->action('Montant :', number_format($this->payment->amount, 2))
-            ->action('Reference :', $this->payment->reference)
+            ->line('Montant : ' . number_format($this->payment->amount, 2))
+            ->line('Reference : ' . $this->payment->reference)
             ->line('Merci d\'utiliser notre application!');
     }
 
