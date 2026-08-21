@@ -11,6 +11,19 @@ use Illuminate\Validation\ValidationException;
 
 class Login extends BaseLogin
 {
+    public function mount(): void
+    {
+        parent::mount();
+
+        if (session('inactivity_logout')) {
+            \Filament\Notifications\Notification::make()
+                ->title('Session expirée')
+                ->body('Vous avez été déconnecté après ' . setting("security.inactivity_timeout_minutes", default: 10) . ' minutes d\'inactivité.')
+                ->warning()
+                ->persistent()
+                ->send();
+        }
+    }
     public function authenticate(): ?\Filament\Auth\Http\Responses\Contracts\LoginResponse
     {
         $service = app(LoginAuditService::class);

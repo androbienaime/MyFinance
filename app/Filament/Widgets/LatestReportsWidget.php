@@ -63,6 +63,7 @@ class LatestReportsWidget extends BaseWidget
     {
         $user = Auth::user();
         $query = Report::query()
+            ->where('status', '!=', ReportStatus::Draft)
             ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
             ->orderByDesc('created_at');
 

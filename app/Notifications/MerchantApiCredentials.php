@@ -30,10 +30,10 @@ class MerchantApiCredentials extends Notification implements ShouldQueue
 
     public function toMail($notifiable): MailMessage
     {
-       return (new MailMessage)
+        return (new MailMessage)
             ->line('Vos identifiants de connexion au tableau de bord marchand.')
-            ->action('Code du compte :', $this->accountCode)
-            ->action('Mot de passe temporaire :', $this->temporaryPassword)
+            ->line('Votre code : ' . $this->accountCode)
+            ->line('Votre mot de passe temporaire : ' . $this->temporaryPassword)
             ->line('Merci d\'utiliser notre application!');
     }
 
