@@ -66,6 +66,11 @@ return [
                 'default' => 90,
                 'scope' => 'global',
             ],
+            'security.inactivity_timeout_minutes' => [
+                'type' => 'number',
+                'default' => 10,
+                'label' => 'Déconnexion automatique après inactivité (minutes)',
+            ],
         ],
     ],
 

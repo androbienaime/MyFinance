@@ -9,6 +9,7 @@ use App\Filament\Widgets\CurrencyFilterTabs;
 use App\Filament\Widgets\GlobalStatsOverview;
 use App\Filament\Widgets\LatestReportsWidget;
 use App\Filament\Widgets\TransactionsChart;
+use App\Http\Middleware\LogoutOnInactivity;
 use App\Http\Middleware\RequirePasswordChange;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
@@ -119,7 +120,8 @@ class AdminFinancePanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-                RequirePasswordChange::class, // à ajouter dans authMiddleware(), après auth
+                LogoutOnInactivity::class, 
+                RequirePasswordChange::class, 
             ])
             ->navigationGroups(
                 collect($groups)->map(fn (string $name) => NavigationGroup::make($name))->all()
