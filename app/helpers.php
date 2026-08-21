@@ -21,4 +21,19 @@ if (! function_exists('set_setting')) {
     {
         app(SettingsManager::class)->set($key, $value, $branchId);
     }
+
+    if (! function_exists('translate_currency_name')) {
+    function translate_currency_name(string $name): string
+    {
+        $translations = [
+            'US Dollar'      => 'Dollar Américain',
+            'Euro'           => 'Euro',
+            'Haitian Gourde' => 'Gourde Haïtienne',
+            'Canadian Dollar'=> 'Dollar Canadien',
+            // ajoute selon tes devises supportées
+        ];
+
+        return $translations[$name] ?? $name;
+    }
+}
 }

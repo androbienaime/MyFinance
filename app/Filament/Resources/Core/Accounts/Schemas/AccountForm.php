@@ -89,7 +89,7 @@ class AccountForm
             ->relationship("currency", "name")
             ->default(fn ()=> Currency::where("iso_code", setting("financial.default_currency", default:'HTG'))->first()->id)
             ->getOptionLabelFromRecordUsing(
-                fn ($record) => "{$record->name}"
+                fn ($record) => translate_currency_name($record->name)
             )
             ->required(),
             

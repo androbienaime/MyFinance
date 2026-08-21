@@ -16,7 +16,7 @@ class CustomerPasswordResetOtp extends Notification implements ShouldQueue
 
     public function via($notifiable): array
     {
-        return [WhatsAppChannel::class];
+        return [WhatsAppChannel::class, 'mail'];
     }
 
     public function toWhatsApp($notifiable): array

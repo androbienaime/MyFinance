@@ -258,7 +258,7 @@
             </div>
             <div class="info-item">
                 <p class="info-label">Devise</p>
-                <p class="info-value">{{ $account->currency->name }}</p>
+                <p class="info-value">{{ translate_currency_name($account->currency->name) }}</p>
             </div>
             <div class="info-item">
                 <p class="info-label">Solde actuel</p>

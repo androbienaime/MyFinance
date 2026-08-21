@@ -229,7 +229,7 @@
                                 <td>{{ $t->created_at->format('d/m/Y H:i') }}</td>
                                 <td>{{ $t->code }}</td>
                                 <td>{{ $t->type->label() }}</td>
-                                <td>{{ number_format($t->amount, 2) }}</td>
+                                <td>{{ $t->currency->iso_code }} {{ number_format($t->amount, 2) }}</td>
                                 <td><span class="status-badge">{{ $t->status->value }}</span></td>
                             </tr>
                         @empty

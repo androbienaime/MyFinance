@@ -18,7 +18,7 @@ class TransactionConfirmed extends Notification implements ShouldQueue
 
     public function via($notifiable): array
     {
-        return ['database', WhatsAppChannel::class];
+        return ['database', 'mail', WhatsAppChannel::class];
         // On peux combiner: return [WhatsAppChannel::class, 'mail', 'database'];
     }
 
@@ -28,12 +28,12 @@ class TransactionConfirmed extends Notification implements ShouldQueue
      */
     public function toWhatsApp($notifiable): array
     {
-        $montant = number_format($this->transaction->amount, 2) . ' HTG';
+        $montant = number_format($this->transaction->amount, 2) . ' ' . $this->transaction->currency->iso_code;
         $type    = $this->transaction->type?->label() ?? 'Transaction';
         $compte  = $this->transaction->account->code ?? '';
         $full_name = $this->transaction->account->customer->person->full_name ?? ' ';
         $transaction_id = $this->transaction->code ?? '';
-        $solde   = number_format($this->transaction->account->balance, 2) . ' HTG';
+        $solde   = number_format($this->transaction->account->balance, 2) . ' ' . $this->transaction->currency->iso_code;
         $date = $this->transaction->created_at;
 
         // --- Option A: template pré-approuvé Meta (recommandé, fonctionne toujours) ---
@@ -52,12 +52,12 @@ class TransactionConfirmed extends Notification implements ShouldQueue
 
     public function toMail($notifiable): \Illuminate\Notifications\Messages\MailMessage
     {
-        $montant = number_format($this->transaction->amount, 2) . ' HTG';
+        $montant = number_format($this->transaction->amount, 2) . ' ' . $this->transaction->currency->iso_code;
         $type    = $this->transaction->type?->label() ?? 'Transaction';
         $compte  = $this->transaction->account->code ?? '';
         $full_name = $this->transaction->account->customer->person->full_name ?? ' ';
         $transaction_id = $this->transaction->code ?? '';
-        $solde   = number_format($this->transaction->account->balance, 2) . ' HTG';
+        $solde   = number_format($this->transaction->account->balance, 2) . ' ' . $this->transaction->currency->iso_code;
         $date = $this->transaction->created_at;
 
         return (new \Illuminate\Notifications\Messages\MailMessage)
@@ -85,8 +85,8 @@ class TransactionConfirmed extends Notification implements ShouldQueue
     private function buildMessage(): string
     {
         return match ($this->transaction->type) {
-            \App\Enums\TransactionType::Deposit => "Depot de {$this->transaction->amount} HTG confirme sur le compte {$this->transaction->account->code}.",
-            \App\Enums\TransactionType::Withdrawal => "Retrait de {$this->transaction->amount} HTG confirme sur le compte {$this->transaction->account->code}.",
+            \App\Enums\TransactionType::Deposit => "Depot de {$this->transaction->amount} {$this->transaction->currency->iso_code} confirme sur le compte {$this->transaction->account->code}.",
+            \App\Enums\TransactionType::Withdrawal => "Retrait de {$this->transaction->amount} {$this->transaction->currency->iso_code} confirme sur le compte {$this->transaction->account->code}.",
             default => "Transaction {$this->transaction->code} confirmee.",
         };
     }
