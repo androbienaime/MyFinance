@@ -18,7 +18,7 @@ class QrPaymentReceived extends Notification implements ShouldQueue
 
     public function via($notifiable): array
     {
-        return ['database', WhatsAppChannel::class];
+        return ['database', 'mail', WhatsAppChannel::class];
     }
 
     public function toWhatsApp($notifiable): array

@@ -51,14 +51,14 @@ class AccountsTable
                 TextColumn::make('balance')
                     ->money(fn(Account $record) => $record?->currency?->iso_code)
                     ->sortable(),
-                TextColumn::make('currency.name')
+                TextColumn::make('currency.iso_code')
                     ->label(__('myfinance.currency'))
                     ->searchable(),
                 TextColumn::make('employee.firstname')
                     ->tooltip(fn (Account $record) => $record->employee?->fullname)
                     ->label(__('myfinance.employee'))
-                    ->visible(auth()->user()->isSuperAdmin())
-                    ->searchable(),
+                    ->visible(auth()->user()->isSuperAdmin()),
+                    // ->searchable(),
                 TextColumn::make('customer.phone_number')
                     ->label(__('myfinance.phone_number'))
                     ->searchable()
