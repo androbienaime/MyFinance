@@ -58,7 +58,7 @@
             width: 34px;
             height: 34px;
             border-radius: 8px;
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            /* background: linear-gradient(135deg, #2563eb, #1d4ed8); */
             color: #fff;
             font-weight: bold;
             font-size: 15px;
