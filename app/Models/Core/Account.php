@@ -45,6 +45,13 @@ class Account extends Model implements Deletable
     protected static function booted(): void
     {
         static::updating(function (Account $account) {
+            // Bloque toute modification si le compte est désactivé
+            if ($account->getOriginal('is_active') === false) {
+                throw ValidationException::withMessages([
+                    'customer_id' => 'Impossible de modifier ce compte : il est désactivé.',
+                ]);
+            }
+
             if ((float) $account->getOriginal('balance') <= 0) {
                 return; // solde nul ou negatif (ne devrait pas arriver) : aucune restriction
             }
