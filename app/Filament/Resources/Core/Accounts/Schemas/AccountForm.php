@@ -37,40 +37,42 @@ class AccountForm
 
          
             Select::make('customer_id')
-                ->label('Client')
-                ->relationship(
-                    name: 'customer',
-                    modifyQueryUsing: fn (Builder $query) => $query->with('person'),
-                )
-                ->getOptionLabelFromRecordUsing(
-                    fn ($record) => "{$record->person?->first_name} {$record->person?->last_name} ({$record->email})"
-                )
-                ->searchable()
-                ->getSearchResultsUsing(function (string $search): array {
-                    return Customer::query()
-                        ->with('person')
-                        ->where('code', 'like', "%{$search}%")
-                        ->orWhereHas('person', function (Builder $query) use ($search) {
-                            $query->where('first_name', 'like', "%{$search}%")
-                                ->orWhere('last_name', 'like', "%{$search}%");
-                        })
-                        ->limit(50)
-                        ->get()
-                        ->mapWithKeys(fn ($customer) => [
-                            $customer->id => "{$customer->person?->first_name} {$customer->person?->last_name} ({$customer->code})",
-                        ])
-                        ->toArray();
-                })
-                ->getOptionLabelUsing(function ($value): ?string {
-                    $customer = Customer::with('person')->find($value);
+            ->label('Client')
+            ->relationship(
+                name: 'customer',
+                modifyQueryUsing: fn (Builder $query) => $query->with(['person', 'person.identityDocuments']),
+            )
+            ->getOptionLabelFromRecordUsing(fn ($record) => static::formatCustomerLabel($record))
+            ->searchable(['code']) // garde une recherche native de fallback sur 'code' ; le vrai filtrage se fait ci-dessous
+            ->getSearchResultsUsing(function (string $search): array {
+                return Customer::query()
+                    ->with(['person', 'person.identityDocuments'])
+                    ->where('code', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone_number', 'like', "%{$search}%")
+                    ->orWhereHas('person', function (Builder $query) use ($search) {
+                        $query->where('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%")
+                            ->orWhereHas('identityDocuments', function (Builder $q) use ($search) {
+                                $q->where('document_number', 'like', "%{$search}%");
+                            });
+                    })
+                    ->limit(50)
+                    ->get()
+                    ->mapWithKeys(fn ($customer) => [
+                        $customer->id => static::formatCustomerLabel($customer),
+                    ])
+                    ->toArray();
+            })
+            ->disabled(fn (string $operation, $record) => $operation === 'edit' && $record && (float) $record->balance > 0)
+            ->getOptionLabelUsing(function ($value): ?string {
+                $customer = Customer::with(['person', 'person.identityDocuments'])->find($value);
 
-                    return $customer
-                        ? "{$customer->person?->first_name} {$customer->person?->last_name} ({$customer->code})"
-                        : null;
-                })
-                ->preload()
-                ->live()
-                ->required(),
+                return $customer ? static::formatCustomerLabel($customer) : null;
+            })
+            ->preload()
+            ->live()
+            ->required(),
 
             Select::make('type_of_account_id')
                 ->label('Type de compte')
@@ -81,6 +83,10 @@ class AccountForm
                             ? $query->where('active_case_payments', false)
                             : $query,
                     )
+                ->disabled(fn (string $operation, $record) => $operation === 'edit' && $record && (float) $record->balance > 0)
+                ->helperText(fn (string $operation, $record) => $operation === 'edit' && $record && (float) $record->balance > 0
+                    ? '🔒 Verrouillé : ce compte a un solde positif (' . number_format($record->balance, 2) . ').'
+                    : null)
                 ->live()
                 ->required(),
 
@@ -91,6 +97,7 @@ class AccountForm
             ->getOptionLabelFromRecordUsing(
                 fn ($record) => translate_currency_name($record->name)
             )
+            ->disabled(fn (string $operation, $record) => $operation === 'edit' && $record && (float) $record->balance > 0)
             ->required(),
             
             Select::make('holder_type')
@@ -103,7 +110,7 @@ class AccountForm
                 ->default(AccountHolderType::Personal->value)
                 ->live()
                 ->required()
-                ->disabled(fn (string $operation) => $operation === 'edit')
+                ->disabled(fn (string $operation, $record) => $operation === 'edit' && $record && (float) $record->balance > 0)
                 ->dehydrated()
                 // Si le type de compte deja selectionne devient incompatible avec
                 // le nouveau holder_type (cas a cases + marchand), on le vide plutot
@@ -263,5 +270,19 @@ class AccountForm
                         ->itemLabel(fn (array $state) => Person::find($state['person_id'] ?? null)?->first_name),
                 ]),
         ]);
+    }
+
+
+    protected static function formatCustomerLabel($record): string
+    {
+        $primaryDoc = $record->person?->identityDocuments
+            ?->where('is_primary', true)
+            ->first();
+
+        $fallback = $record->email
+            ?? $record->phone_number
+            ?? ($primaryDoc ? "{$primaryDoc->document_type}:{$primaryDoc->document_number}" : null);
+
+        return trim("{$record->person?->full_name} ({$fallback})");
     }
 }

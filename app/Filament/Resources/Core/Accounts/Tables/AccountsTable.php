@@ -8,6 +8,7 @@ use App\Filament\Actions\GuardedDeleteAction;
 use App\Filament\Actions\GuardedDeleteBulkAction;
 use App\Filament\Resources\Core\Accounts\Tables\Actions\AccountStatementActions;
 use App\Models\Core\Account;
+use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -15,6 +16,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Notifications\Notification;
+use Filament\Support\Exceptions\Halt;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
@@ -82,8 +84,55 @@ class AccountsTable
                 TrashedFilter::make(),
             ])
             ->recordActions([
-                EditAction::make(),
-                GuardedDeleteAction::make(),
+                EditAction::make()
+                    ->mutateFormDataUsing(function (array $data, $record) {
+                        $currentBalance = (float) $record->balance;
+
+                        if ($currentBalance <= 0) {
+                            return $data;
+                        }
+
+                        $protectedFields = [
+                            'customer_id' => 'Client',
+                            'type_of_account_id' => 'Type de compte',
+                            'holder_type' => 'Type de titulaire',
+                            'currency_id' => 'Devise',
+                        ];
+
+                        $normalize = function ($value) {
+                            if ($value instanceof BackedEnum) {
+                                return (string) $value->value;
+                            }
+
+                            return $value === null ? null : (string) $value;
+                        };
+
+                        $changedFields = collect($protectedFields)
+                            ->filter(function ($label, $field) use ($data, $record, $normalize) {
+                                if (! array_key_exists($field, $data)) {
+                                    return false;
+                                }
+
+                                return $normalize($data[$field]) !== $normalize($record->{$field});
+                            });
+
+                        if ($changedFields->isNotEmpty()) {
+                            $fieldNames = $changedFields->values()->implode(', ');
+
+                            Notification::make()
+                                ->title('Modification refusée')
+                                ->body("Impossible de modifier ({$fieldNames}) : ce compte a un solde positif ({$currentBalance}).")
+                                ->danger()
+                                ->persistent()
+                                ->send();
+
+                            throw new Halt();
+                        }
+
+                        return $data;
+                    }),
+
+             GuardedDeleteAction::make(),
                 Action::make('restoreAccount')
                 ->label('Restaurer le compte')
                 ->icon('heroicon-o-arrow-path')
