@@ -84,53 +84,70 @@ class AccountsTable
                 TrashedFilter::make(),
             ])
             ->recordActions([
-                EditAction::make()
-                    ->mutateFormDataUsing(function (array $data, $record) {
-                        $currentBalance = (float) $record->balance;
+              EditAction::make()
+                ->mutateFormDataUsing(function (array $data, $record) {
+                    // Bloque toute modification si le compte est désactivé,
+                    // sauf si cette modification consiste justement à le réactiver
+                    if (
+                        $record->is_active === false
+                        // && array_key_exists('is_active', $data)
+                        // && (bool) $data['is_active'] === false
+                    ) {
+                        Notification::make()
+                            ->title('Modification refusée')
+                            ->body('Impossible de modifier ce compte : il est désactivé.')
+                            ->danger()
+                            ->persistent()
+                            ->send();
 
-                        if ($currentBalance <= 0) {
-                            return $data;
+                        throw new Halt();
+                    }
+
+                    $currentBalance = (float) $record->balance;
+
+                    if ($currentBalance <= 0) {
+                        return $data;
+                    }
+
+                    $protectedFields = [
+                        'customer_id' => 'Client',
+                        'type_of_account_id' => 'Type de compte',
+                        'holder_type' => 'Type de titulaire',
+                        'currency_id' => 'Devise',
+                    ];
+
+                    $normalize = function ($value) {
+                        if ($value instanceof BackedEnum) {
+                            return (string) $value->value;
                         }
 
-                        $protectedFields = [
-                            'customer_id' => 'Client',
-                            'type_of_account_id' => 'Type de compte',
-                            'holder_type' => 'Type de titulaire',
-                            'currency_id' => 'Devise',
-                        ];
+                        return $value === null ? null : (string) $value;
+                    };
 
-                        $normalize = function ($value) {
-                            if ($value instanceof BackedEnum) {
-                                return (string) $value->value;
+                    $changedFields = collect($protectedFields)
+                        ->filter(function ($label, $field) use ($data, $record, $normalize) {
+                            if (! array_key_exists($field, $data)) {
+                                return false;
                             }
 
-                            return $value === null ? null : (string) $value;
-                        };
+                            return $normalize($data[$field]) !== $normalize($record->{$field});
+                        });
 
-                        $changedFields = collect($protectedFields)
-                            ->filter(function ($label, $field) use ($data, $record, $normalize) {
-                                if (! array_key_exists($field, $data)) {
-                                    return false;
-                                }
+                    if ($changedFields->isNotEmpty()) {
+                        $fieldNames = $changedFields->values()->implode(', ');
 
-                                return $normalize($data[$field]) !== $normalize($record->{$field});
-                            });
+                        Notification::make()
+                            ->title('Modification refusée')
+                            ->body("Impossible de modifier ({$fieldNames}) : ce compte a un solde positif ({$currentBalance}).")
+                            ->danger()
+                            ->persistent()
+                            ->send();
 
-                        if ($changedFields->isNotEmpty()) {
-                            $fieldNames = $changedFields->values()->implode(', ');
+                        throw new Halt();
+                    }
 
-                            Notification::make()
-                                ->title('Modification refusée')
-                                ->body("Impossible de modifier ({$fieldNames}) : ce compte a un solde positif ({$currentBalance}).")
-                                ->danger()
-                                ->persistent()
-                                ->send();
-
-                            throw new Halt();
-                        }
-
-                        return $data;
-                    }),
+                    return $data;
+                }),
 
              GuardedDeleteAction::make(),
                 Action::make('restoreAccount')
