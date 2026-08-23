@@ -76,6 +76,12 @@ class CreateAccountAction
                     'employee_id' => $employee->id,
                 ]);
 
+                if (! empty($item['address']) && array_filter($item['address'])) {
+                    $addressData = $item['address'];
+                    $addressData['active'] = true;
+                    $person->addresses()->create($addressData);
+                }
+
                 AccountPerson::create([
                     'account_id' => $account->id,
                     'person_id' => $person->id,

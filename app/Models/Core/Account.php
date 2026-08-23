@@ -17,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
 
 class Account extends Model implements Deletable
 {
@@ -38,6 +40,34 @@ class Account extends Model implements Deletable
         'is_active' => 'boolean',
         'holder_type' => AccountHolderType::class
     ];
+
+    
+    protected static function booted(): void
+    {
+        static::updating(function (Account $account) {
+            if ((float) $account->getOriginal('balance') <= 0) {
+                return; // solde nul ou negatif (ne devrait pas arriver) : aucune restriction
+            }
+
+            $protectedFields = [
+                'customer_id' => 'Client',
+                'type_of_account_id' => 'Type de compte',
+                'holder_type' => 'Type de titulaire',
+                'currency_id' => 'Devise',
+            ];
+
+            $changedProtectedFields = collect($protectedFields)
+                ->filter(fn ($label, $field) => $account->isDirty($field));
+
+            if ($changedProtectedFields->isNotEmpty()) {
+                $fieldNames = $changedProtectedFields->values()->implode(', ');
+
+                throw ValidationException::withMessages([
+                    'customer_id' => "Impossible de modifier ({$fieldNames}) : ce compte a un solde positif ({$account->getOriginal('balance')}). Le solde doit d'abord être ramené à zéro.",
+                ]);
+            }
+        });
+    }
 
     public function typeOfAccount(): BelongsTo
     {

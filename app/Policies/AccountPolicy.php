@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Core\Account;
 use App\Models\User;
+use Illuminate\Validation\Rules\Can;
 
 class AccountPolicy
 {
@@ -36,7 +37,7 @@ class AccountPolicy
 
     public function update(User $user, Account $account): bool
     {
-        return false; // Les comptes ne sont pas modifiables par les utilisateurs, seulement par le systeme (ex: via des actions de credit/debit)
+        return $user->can('accounts.update'); // Les comptes ne sont pas modifiables par les utilisateurs, seulement par le systeme (ex: via des actions de credit/debit)
     }
 
     /**
