@@ -167,108 +167,166 @@ class AccountForm
             // APRES la creation du compte (contrairement a Person/Customer
             // qui est BelongsTo et doit exister AVANT). Pas de logique
             // manuelle necessaire ici, contrairement a CreateCustomer.
-            Section::make('Personnes associees au compte')
-                ->description('Choisis une personne existante ou cree-la a la volee.')
-                ->schema([
-                    Repeater::make('accountPeople')
-                        ->relationship(
-                            'accountPeople',
-                            modifyQueryUsing: fn (Builder $query) => $query->where('role', '!=', 'owner')
-                        )
-                        ->label('')
-                        ->schema([
+            Repeater::make('accountPeople')
+            ->relationship(
+                'accountPeople',
+                modifyQueryUsing: fn (Builder $query) => $query->where('role', '!=', 'owner')
+            )
+            ->label('')
+            ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => static::persistAddressAndStrip($data))
+            ->mutateRelationshipDataBeforeSaveUsing(fn (array $data): array => static::persistAddressAndStrip($data))
+            ->schema([
+                Grid::make(2)->schema([
+                    Select::make('person_id')
+                        ->label('Personne')
+                        ->relationship('person', 'first_name')
+                        ->getOptionLabelFromRecordUsing(fn (Person $record) => trim("{$record->first_name} {$record->last_name}"))
+                        ->searchable()
+                        ->getSearchResultsUsing(function (string $search) {
+                            return Person::query()
+                                ->where('employee_id', auth()->user()->employee?->id)
+                                ->where(function (Builder $query) use ($search) {
+                                    $query->where('first_name', 'like', "%{$search}%")
+                                        ->orWhere('last_name', 'like', "%{$search}%");
+                                })
+                                ->limit(50)
+                                ->get()
+                                ->mapWithKeys(fn (Person $person) => [
+                                    $person->id => trim("{$person->first_name} {$person->last_name}"),
+                                ]);
+                        })
+                        ->getOptionLabelUsing(function ($value): ?string {
+                            $person = Person::find($value);
+
+                            return $person ? trim("{$person->first_name} {$person->last_name}") : null;
+                        })
+                        ->preload()
+                        ->live()
+                        ->default(function (Get $get) {
+                            $customerId = $get('../../customer_id');
+
+                            if (! $customerId) {
+                                return null;
+                            }
+
+                            return AccountPerson::whereHas(
+                                    'account',
+                                    fn (Builder $query) => $query->where('customer_id', $customerId)
+                                )
+                                ->latest('id')
+                                ->value('person_id');
+                        })
+                        ->required()
+                        ->createOptionForm([
                             Grid::make(2)->schema([
-                                Select::make('person_id')
-                                    ->label('Personne')
-                                    ->relationship('person', 'first_name') // pas de modifyQueryUsing ici -> validation "exists" reste correcte
-                                    ->getOptionLabelFromRecordUsing(fn (Person $record) => trim("{$record->first_name} {$record->last_name}"))
-                                    ->searchable()
-                                    ->getSearchResultsUsing(function (string $search) {
-                                        return Person::query()
-                                            ->where('employee_id', auth()->user()->employee?->id)
-                                            ->where(function (Builder $query) use ($search) {
-                                                $query->where('first_name', 'like', "%{$search}%")
-                                                    ->orWhere('last_name', 'like', "%{$search}%");
-                                            })
-                                            ->limit(50)
-                                            ->get()
-                                            ->mapWithKeys(fn (Person $person) => [
-                                                $person->id => trim("{$person->first_name} {$person->last_name}"),
-                                            ]);
-                                    })
-                                    ->getOptionLabelUsing(function ($value): ?string {
-                                        $person = Person::find($value);
-
-                                        return $person ? trim("{$person->first_name} {$person->last_name}") : null;
-                                    })
-                                    ->preload()
-                                    ->default(function (Get $get) {
-                                        $customerId = $get('../../customer_id');
-
-                                        if (! $customerId) {
-                                            return null;
-                                        }
-
-                                        return AccountPerson::whereHas(
-                                                'account',
-                                                fn (Builder $query) => $query->where('customer_id', $customerId)
-                                            )
-                                            ->latest('id')
-                                            ->value('person_id');
-                                    })
-                                    ->required()
-                                    ->createOptionForm([
-                                        Grid::make(2)->schema([
-                                            TextInput::make('first_name')->label('Prenom')->required(),
-                                            TextInput::make('last_name')->label('Nom')->required(),
-                                            Select::make('gender')
-                                                ->label('Genre')
-                                                ->options(['male' => 'Masculin', 'female' => 'Feminin']),
-                                        ]),
-                                    ])
-                                    ->createOptionUsing(function (array $data) {
-                                        $data['employee_id'] = auth()->user()->employee?->id;
-
-                                        return Person::create($data)->getKey();
-                                    }),
-
-                                Select::make('role')
-                                    ->label('Role')
-                                    ->live()
-                                    ->options([
-                                        // 'owner' => 'Titulaire',
-                                        'co_owner' => 'Cotitulaire',
-                                        'attorney' => 'Mandataire',
-                                        'beneficiary' => 'Beneficiaire',
-                                        'guardian' => 'Representant legal',
-                                    ])
-                                    ->default(fn () => 'attorney')
-                                    ->required()
-                                    // Deduit des permissions par defaut selon
-                                    // le role choisi - simple valeur de depart
-                                    // stockee, pas encore verifiee par les
-                                    // Actions (mis en pause volontairement).
-                                    ->afterStateUpdated(function ($state, callable $set) {
-                                        $set('permissions', match ($state) {
-                                            'owner', 'co_owner' => ['view', 'withdraw', 'deposit'],
-                                            'attorney' => ['view', 'withdraw'],
-                                            default => ['view'],
-                                        });
-                                    }),
-
-                                TextInput::make('share_percentage')
-                                    ->label('Part (%)')
-                                    ->numeric()
-                                    ->suffix('%')
-                                    ->visible(fn ($get) => $get('role') === 'beneficiary'),
-
-                                Hidden::make('permissions')->default(['view']),
+                                TextInput::make('first_name')->label('Prenom')->required(),
+                                TextInput::make('last_name')->label('Nom')->required(),
+                                Select::make('gender')
+                                    ->label('Genre')
+                                    ->options(['male' => 'Masculin', 'female' => 'Feminin']),
                             ]),
                         ])
-                        ->addActionLabel('Ajouter une personne')
-                        ->collapsible()
-                        ->itemLabel(fn (array $state) => Person::find($state['person_id'] ?? null)?->first_name),
+                        ->createOptionUsing(function (array $data) {
+                            $data['employee_id'] = auth()->user()->employee?->id;
+
+                            return Person::create($data)->getKey();
+                        }),
+
+                    Select::make('role')
+                        ->label('Role')
+                        ->live()
+                        ->options([
+                            'co_owner' => 'Cotitulaire',
+                            'attorney' => 'Mandataire',
+                            'beneficiary' => 'Beneficiaire',
+                            'guardian' => 'Representant legal',
+                        ])
+                        ->default(fn () => 'attorney')
+                        ->required()
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            $set('permissions', match ($state) {
+                                'owner', 'co_owner' => ['view', 'withdraw', 'deposit'],
+                                'attorney' => ['view', 'withdraw'],
+                                default => ['view'],
+                            });
+                        }),
+
+                    TextInput::make('share_percentage')
+                        ->label('Part (%)')
+                        ->numeric()
+                        ->suffix('%')
+                        ->visible(fn ($get) => $get('role') === 'beneficiary'),
+
+                    Hidden::make('permissions')->default(['view']),
                 ]),
+
+                Section::make('Adresse')
+                    ->columns(2)
+                    ->collapsible()
+                    ->collapsed()
+                    ->schema([
+                        Select::make('address.country_id')
+                            ->label('Pays')
+                            ->options(fn () => \App\Models\Core\Country::pluck('name', 'id'))
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->afterStateHydrated(fn ($component, Get $get) => static::hydrateAddressField($component, $get, 'country_id')),
+
+                        Select::make('address.state_id')
+                            ->label('Departement/Etat')
+                            ->options(function (Get $get) {
+                                $countryId = $get('address.country_id');
+
+                                return $countryId
+                                    ? \App\Models\Core\State::where('country_id', $countryId)->pluck('name', 'id')
+                                    : \App\Models\Core\State::pluck('name', 'id');
+                            })
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->afterStateHydrated(fn ($component, Get $get) => static::hydrateAddressField($component, $get, 'state_id')),
+
+                        Select::make('address.city_id')
+                            ->label('Ville')
+                            ->options(function (Get $get) {
+                                $stateId = $get('address.state_id');
+
+                                return $stateId
+                                    ? \App\Models\Core\City::where('state_id', $stateId)->pluck('name', 'id')
+                                    : \App\Models\Core\City::pluck('name', 'id');
+                            })
+                            ->searchable()
+                            ->preload()
+                            ->afterStateHydrated(fn ($component, Get $get) => static::hydrateAddressField($component, $get, 'city_id')),
+                        TextInput::make('address.city2')
+                            ->label('Ville (complement)')
+                            ->afterStateHydrated(fn ($component, Get $get) => static::hydrateAddressField($component, $get, 'city2')),
+
+                        TextInput::make('address.address1')
+                            ->label('Adresse ligne 1')
+                            ->columnSpanFull()
+                            ->afterStateHydrated(fn ($component, Get $get) => static::hydrateAddressField($component, $get, 'address1')),
+
+                        TextInput::make('address.address2')
+                            ->label('Adresse ligne 2')
+                            ->columnSpanFull()
+                            ->afterStateHydrated(fn ($component, Get $get) => static::hydrateAddressField($component, $get, 'address2')),
+
+                        TextInput::make('address.phone')
+                            ->label('Telephone')
+                            ->tel()
+                            ->afterStateHydrated(fn ($component, Get $get) => static::hydrateAddressField($component, $get, 'phone')),
+
+                        TextInput::make('address.email')
+                            ->label('Email')
+                            ->email()
+                            ->afterStateHydrated(fn ($component, Get $get) => static::hydrateAddressField($component, $get, 'email')),
+                    ]),
+            ])
+            ->addActionLabel('Ajouter une personne')
+            ->collapsible()
+            ->itemLabel(fn (array $state) => Person::find($state['person_id'] ?? null)?->first_name),
         ]);
     }
 
@@ -284,5 +342,58 @@ class AccountForm
             ?? ($primaryDoc ? "{$primaryDoc->document_type}:{$primaryDoc->document_number}" : null);
 
         return trim("{$record->person?->full_name} ({$fallback})");
+    }
+
+
+    /**
+     * Recupere l'adresse active existante de la personne pour pre-remplir
+     * le champ au chargement du formulaire (edition d'un accountPeople
+     * deja en base) - les champs 'address.*' ne correspondent a aucune
+     * colonne d'AccountPerson, donc Filament ne peut pas les hydrater
+     * automatiquement via la relation.
+     */
+    protected static function hydrateAddressField($component, Get $get, string $field): void
+    {
+        $personId = $get('person_id');
+
+        if (! $personId) {
+            return;
+        }
+
+        $address = Person::find($personId)?->addresses()->where('active', true)->first();
+
+        $component->state($address?->{$field});
+    }
+
+    /**
+     * Cree ou met a jour l'adresse active de la personne comme effet de
+     * bord, puis retire la cle 'address' du tableau - AccountPerson n'a
+     * pas de colonne 'address', ce champ ne doit jamais lui etre transmis.
+     */
+    protected static function persistAddressAndStrip(array $data): array
+    {
+        $addressData = $data['address'] ?? null;
+        unset($data['address']);
+
+        if (! $addressData || ! array_filter($addressData) || empty($data['person_id'])) {
+            return $data;
+        }
+
+        $person = Person::find($data['person_id']);
+
+        if (! $person) {
+            return $data;
+        }
+
+        $existing = $person->addresses()->where('active', true)->first();
+
+        if ($existing) {
+            $existing->update($addressData);
+        } else {
+            $addressData['active'] = true;
+            $person->addresses()->create($addressData);
+        }
+
+        return $data;
     }
 }

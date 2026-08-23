@@ -256,58 +256,103 @@ class CustomerForm
                         ->columnSpanFull(),
                 ])->columnSpanFull(),
 
-                        Section::make('Personnes associees au compte')
-                            ->description('Ajoute les personnes qui auront un role sur ce compte, en plus du titulaire principal.')
+                    Section::make('Personnes associees au compte')
+                    ->description('Ajoute les personnes qui auront un role sur ce compte, en plus du titulaire principal.')
+                    ->schema([
+                        Repeater::make('additional_account_people')
+                            ->label('')
                             ->schema([
-                                Repeater::make('additional_account_people')
-                                    ->label('')
-                                    // Pas de ->relationship() ici : rien n'existe encore en base.
-                                    // C'est un simple tableau d'etat, traite manuellement dans
-                                    // CreateCustomer::handleRecordCreation().
-                                    ->schema([
-                                        Grid::make(2)->schema([
-                                            TextInput::make('first_name')->label('Prenom')->required(),
-                                            TextInput::make('last_name')->label('Nom')->required(),
+                                Grid::make(2)->schema([
+                                    TextInput::make('first_name')->label('Prenom')->required(),
+                                    TextInput::make('last_name')->label('Nom')->required(),
 
-                                            Select::make('role')
-                                                ->label('Role')
-                                                ->live()
-                                                ->options([
-                                                    'co_owner' => 'Cotitulaire',
-                                                    'attorney' => 'Mandataire',
-                                                    'beneficiary' => 'Beneficiaire',
-                                                    'guardian' => 'Representant legal',
-                                                ])
-                                                ->required(),
+                                    Select::make('role')
+                                        ->label('Role')
+                                        ->live()
+                                        ->options([
+                                            'co_owner' => 'Cotitulaire',
+                                            'attorney' => 'Mandataire',
+                                            'beneficiary' => 'Beneficiaire',
+                                            'guardian' => 'Representant legal',
+                                        ])
+                                        ->required(),
 
-                                            TextInput::make('share_percentage')
-                                                ->label('Part (%)')
-                                                ->numeric()
-                                                ->suffix('%')
-                                                ->visible(fn ($get) => $get('role') === 'beneficiary'),
+                                    TextInput::make('share_percentage')
+                                        ->label('Part (%)')
+                                        ->numeric()
+                                        ->suffix('%')
+                                        ->visible(fn ($get) => $get('role') === 'beneficiary'),
 
-                                    
-                                            Select::make('gender')
-                                                ->label('Genre')
-                                                ->options(['male' => 'Masculin', 'female' => 'Feminin']),
-                                        ]),
-                                    ])
+                                    Select::make('gender')
+                                        ->label('Genre')
+                                        ->options(['male' => 'Masculin', 'female' => 'Feminin']),
+                                ]),
+
+                                Section::make('Adresse')
+                                    ->columns(2)
                                     ->collapsible()
-                                    ->itemLabel(fn (array $state): ?string => $state['first_name'] ?? null),
+                                    ->collapsed()
+                                    ->schema([
+                                        Select::make('address.country_id')
+                                            ->label('Pays')
+                                            ->options(fn () => \App\Models\Core\Country::pluck('name', 'id'))
+                                            ->searchable()
+                                            ->preload()
+                                            ->live(),
+
+                                        Select::make('address.state_id')
+                                            ->label('Departement/Etat')
+                                            ->options(function (Get $get) {
+                                                $countryId = $get('address.country_id');
+
+                                                return $countryId
+                                                    ? \App\Models\Core\State::where('country_id', $countryId)->pluck('name', 'id')
+                                                    : \App\Models\Core\State::pluck('name', 'id');
+                                            })
+                                            ->searchable()
+                                            ->preload()
+                                            ->live(),
+
+                                        Select::make('address.city_id')
+                                            ->label('Ville')
+                                            ->options(function (Get $get) {
+                                                $stateId = $get('address.state_id');
+
+                                                return $stateId
+                                                    ? \App\Models\Core\City::where('state_id', $stateId)->pluck('name', 'id')
+                                                    : \App\Models\Core\City::pluck('name', 'id');
+                                            })
+                                            ->searchable()
+                                            ->preload(),
+
+                                        TextInput::make('address.city2')
+                                            ->label('Ville (complement)'),
+
+                                        TextInput::make('address.address1')
+                                            ->label('Adresse ligne 1')
+                                            ->columnSpanFull(),
+
+                                        TextInput::make('address.address2')
+                                            ->label('Adresse ligne 2')
+                                            ->columnSpanFull(),
+
+                                        TextInput::make('address.phone')
+                                            ->label('Telephone')
+                                            ->tel(),
+
+                                        TextInput::make('address.email')
+                                            ->label('Email')
+                                            ->email(),
+                                    ]),
                             ])
-                            ->visible(fn (string $operation) => $operation === 'create'),
+                            ->collapsible()
+                            ->itemLabel(fn (array $state): ?string => $state['first_name'] ?? null),
+                    ])
+                    ->visible(fn (string $operation) => $operation === 'create'),
                     ])
                     // Uniquement a la creation - on ne veut pas permettre de
                     // recreer un compte depuis le formulaire d'edition du client.
                     ->visible(fn (string $operation) => $operation === 'create'),
-                    // Select::make('employee_id')
-                    //         ->label('Cree par')
-                    //         ->relationship('employee', 'firstname')
-                    //         ->default(fn () => Auth::user()->employee?->id)
-                    //         ->disabled()
-                    //         // ->dehydrated()
-                    //         ->required()
-                    //         // ->visible(false),
                 ])->columns(1)
                 ->columnSpan(3),
                 Grid::make()
