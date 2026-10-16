@@ -8,7 +8,9 @@ use App\Enums\TransactionDirection;
 use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
 use App\Exceptions\TransactionRejectedException;
+use App\Models\Core\Branch;
 use App\Models\Core\Currency;
+use App\Models\Core\Employee;
 use App\Models\Core\Transaction;
 use App\Notifications\TransactionConfirmed;
 use Filament\Actions\Action;
@@ -170,7 +172,31 @@ trait TransactionsTableTrait
 
                     return $indicators;
                 }),
-            ])
+
+                SelectFilter::make('branch_id')
+                    ->label('Succursale')
+                    ->options(fn () => Branch::query()->orderBy('name')->pluck('name', 'id'))
+                    ->searchable()
+                    ->visible(fn () => Auth::user()->hasRole('super_admin'))
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            filled($data['value'] ?? null),
+                            fn (Builder $q) => $q->whereHas(
+                                'employee',
+                                fn (Builder $e) => $e->where('branch_id', $data['value'])
+                            ),
+                        );
+                    }),
+
+                SelectFilter::make('employee_id')
+                    ->label('Employe')
+                    ->options(fn () => Employee::query()
+                        ->get()
+                        ->mapWithKeys(fn ($e) => [$e->id => $e->fullName()])
+                        ->sort())
+                    ->searchable()
+                    ->visible(fn () => Auth::user()->hasRole('super_admin')),
+                ])
             ->recordActions([
                 Action::make('approve')
                     ->label(__('myfinance.approve'))
@@ -253,8 +279,9 @@ trait TransactionsTableTrait
                     }),
             ])
             ->query(function () {
-                $employee = Auth::user()->employee;
-
+                $user = Auth::user();
+                $employee = $user->employee;
+                
                 $query = Transaction::query()->with([
                     'account.customer.person',
                     'counterpartyAccount.customer.person',
@@ -262,7 +289,7 @@ trait TransactionsTableTrait
                     'currency', // evite un N+1 sur chaque ligne du tableau
                 ]);
 
-                if ($employee) {
+                if (!$user->hasRole('super_admin') && $employee) {
                     $query->orderByRelevanceTo($employee->branch_id, $employee->id);
                 }
 
