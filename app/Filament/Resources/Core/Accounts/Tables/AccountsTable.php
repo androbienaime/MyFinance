@@ -190,6 +190,6 @@ class AccountsTable
                     // ForceDeleteBulkAction::make(),
                     // RestoreBulkAction::make(),
                 ]),
-            ])->defaultSort('updated_at', 'desc');
+            ])->defaultSort('created_at', 'desc');
     }
 }

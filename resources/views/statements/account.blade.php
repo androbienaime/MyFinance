@@ -278,10 +278,18 @@
                     <th>Code</th>
                     <th>Type</th>
                     <th>Montant</th>
+                    <th>Solde</th>
                     <th>Statut</th>
                 </tr>
             </thead>
             <tbody>
+                @if ($transactions->isNotEmpty())
+                    <tr style="background:#eff6ff;">
+                        <td colspan="5"><strong>Solde d'ouverture</strong> ({{ $from->format('d/m/Y') }})</td>
+                        <td style="text-align:right;"><strong>{{ number_format($openingBalance, 2) }} {{ $account->currency->iso_code }}</strong></td>
+                    </tr>
+                @endif
+
                 @forelse ($transactions as $t)
                     <tr>
                         <td>{{ $t->created_at->format('d/m/Y H:i') }}</td>
@@ -290,10 +298,13 @@
                         <td class="{{ in_array($t->direction?->value, ['credit']) || in_array($t->type->value, ['deposit']) ? 'amount-credit' : 'amount-debit' }}">
                             {{ $t?->currency?->iso_code }} {{ number_format($t->amount, 2) }}
                         </td>
+                        <td style="font-weight:bold;">
+                            {{ $t->currency?->iso_code }} {{ $t->balance_after !== null ? number_format($t->balance_after, 2) : '—' }}
+                        </td>
                         <td><span class="status-badge">{{ $t->status->value }}</span></td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" style="text-align:center; color:#94a3b8;">Aucune transaction sur cette période.</td></tr>
+                    <tr><td colspan="6" style="text-align:center; color:#94a3b8;">Aucune transaction sur cette période.</td></tr>
                 @endforelse
             </tbody>
         </table>
