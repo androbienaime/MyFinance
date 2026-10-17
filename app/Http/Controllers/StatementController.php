@@ -4,27 +4,28 @@ namespace App\Http\Controllers;
 
 use App\Models\Core\Account;
 use App\Models\Core\Customer;
+use App\Services\StatementBalanceCalculator;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class StatementController extends Controller
 {
+    public function __construct(private StatementBalanceCalculator $calculator) {}
+
     public function printAccount(Request $request, Account $account)
     {
         abort_unless(auth()->user()->can('view', $account), 403);
 
-        $data = $this->buildAccountStatementData($account, $request);
-
-        return view('statements.account', $data);
+        return view('statements.account', $this->buildAccountStatementData($account, $request));
     }
 
     public function downloadAccountPdf(Request $request, Account $account)
     {
         abort_unless(auth()->user()->can('view', $account), 403);
 
-        $data = $this->buildAccountStatementData($account, $request);
-
-        $pdf = Pdf::loadView('statements.account', $data)->setPaper('a4');
+        $pdf = Pdf::loadView('statements.account', $this->buildAccountStatementData($account, $request))
+            ->setPaper('a4');
 
         return $pdf->download("releve-{$account->code}.pdf");
     }
@@ -33,43 +34,61 @@ class StatementController extends Controller
     {
         abort_unless(auth()->user()->can('view', $customer), 403);
 
-        $data = $this->buildCustomerStatementData($customer, $request);
-
-        return view('statements.customer', $data);
+        return view('statements.customer', $this->buildCustomerStatementData($customer, $request));
     }
 
     public function downloadCustomerPdf(Request $request, Customer $customer)
     {
         abort_unless(auth()->user()->can('view', $customer), 403);
 
-        $data = $this->buildCustomerStatementData($customer, $request);
-
-        $pdf = Pdf::loadView('statements.customer', $data)->setPaper('a4');
+        $pdf = Pdf::loadView('statements.customer', $this->buildCustomerStatementData($customer, $request))
+            ->setPaper('a4');
 
         return $pdf->download("releve-client-{$customer->code}.pdf");
     }
 
+    /**
+     * Periode normalisee : debut de journee / fin de journee. Indispensable
+     * pour que la liste des transactions et le calcul du solde d'ouverture
+     * portent exactement sur la meme fenetre.
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function resolvePeriod(Request $request): array
+    {
+        $from = $request->query('from')
+            ? Carbon::parse($request->query('from'))
+            : now()->subMonth();
+
+        $to = $request->query('to')
+            ? Carbon::parse($request->query('to'))
+            : now();
+
+        return [$from->startOfDay(), $to->endOfDay()];
+    }
+
     private function buildAccountStatementData(Account $account, Request $request): array
     {
-        $from = $request->query('from') ? \Carbon\Carbon::parse($request->query('from')) : now()->subMonths(1);
-        $to = $request->query('to') ? \Carbon\Carbon::parse($request->query('to'))->endOfDay() : now();
+        [$from, $to] = $this->resolvePeriod($request);
 
         $account->load(['typeOfAccount', 'currency', 'customer.person']);
 
         $transactions = $account->transactions()
             ->whereBetween('created_at', [$from, $to])
-            ->orderBy('created_at')
+            ->with('currency')
             ->get();
 
-        $caseGrid = null;
+        $result = $this->calculator->compute($account, $transactions, $from);
 
-        if ((bool) $account->typeOfAccount->active_case_payments) {
-            $caseGrid = $this->buildCaseGrid($account);
-        }
+        $caseGrid = (bool) $account->typeOfAccount->active_case_payments
+            ? $this->buildCaseGrid($account)
+            : null;
 
         return [
             'account' => $account,
-            'transactions' => $transactions,
+            'transactions' => $result['transactions'], // chronologiques, avec ->balance_after
+            'openingBalance' => $result['opening'],
+            'closingBalance' => $result['closing'],
             'caseGrid' => $caseGrid,
             'from' => $from,
             'to' => $to,
@@ -79,19 +98,24 @@ class StatementController extends Controller
 
     private function buildCustomerStatementData(Customer $customer, Request $request): array
     {
-        $from = $request->query('from') ? \Carbon\Carbon::parse($request->query('from')) : now()->subMonths(1);
-        $to = $request->query('to') ? \Carbon\Carbon::parse($request->query('to'))->endOfDay() : now();
+        [$from, $to] = $this->resolvePeriod($request);
 
         $customer->load('person');
 
         $accounts = $customer->accounts()
             ->with(['typeOfAccount', 'currency'])
             ->get()
-            ->map(function ($account) use ($from, $to) {
-                $account->periodTransactions = $account->transactions()
+            ->map(function (Account $account) use ($from, $to) {
+                $transactions = $account->transactions()
                     ->whereBetween('created_at', [$from, $to])
-                    ->orderBy('created_at')
+                    ->with('currency')
                     ->get();
+
+                $result = $this->calculator->compute($account, $transactions, $from);
+
+                $account->periodTransactions = $result['transactions'];
+                $account->openingBalance = $result['opening'];
+                $account->closingBalance = $result['closing'];
 
                 return $account;
             });

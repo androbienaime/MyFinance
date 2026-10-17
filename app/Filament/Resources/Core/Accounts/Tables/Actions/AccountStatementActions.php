@@ -16,15 +16,10 @@ class AccountStatementActions
             ->icon('heroicon-o-arrow-down-tray')
             ->color('gray')
             ->visible(fn (Account $record) => auth()->user()->can('view', $record))
-            ->schema([
-                Grid::make(2)->schema([
-                    DatePicker::make('from')->label('Du')->default(now()->subMonth())->required(),
-                    DatePicker::make('to')->label('Au')->default(now())->required(),
-                ]),
-            ])
+            ->schema(self::dateRangeSchema())
             ->modalSubmitActionLabel('Télécharger')
             ->action(fn (Account $record, array $data) => redirect()->to(
-                route('statements.account.download', ['account' => $record->id, 'from' => $data['from'], 'to' => $data['to']])
+                route('statements.account.download', self::routeParams($record, $data))
             ));
     }
 
@@ -35,17 +30,35 @@ class AccountStatementActions
             ->icon('heroicon-o-printer')
             ->color('gray')
             ->visible(fn (Account $record) => auth()->user()->can('view', $record))
-            ->schema([
-                Grid::make(2)->schema([
-                    DatePicker::make('from')->label('Du')->default(now()->subMonth())->required(),
-                    DatePicker::make('to')->label('Au')->default(now())->required(),
-                ]),
-            ])
+            ->schema(self::dateRangeSchema())
             ->modalSubmitActionLabel('Voir l\'aperçu')
-            ->action(function (Account $record, array $data) {
-                $url = route('statements.account.print', ['account' => $record->id, 'from' => $data['from'], 'to' => $data['to']]);
+            ->action(fn (Account $record, array $data) => redirect()->to(
+                route('statements.account.print', self::routeParams($record, $data))
+            ));
+    }
 
-                return redirect()->away($url);
-            });
+    private static function dateRangeSchema(): array
+    {
+        return [
+            Grid::make(2)->schema([
+                DatePicker::make('from')
+                    ->label('Du')
+                    ->default(now()->subMonth())
+                    ->maxDate(now())
+                    ->required(),
+
+                DatePicker::make('to')
+                    ->label('Au')
+                    ->default(now())
+                    ->maxDate(now())
+                    ->afterOrEqual('from')
+                    ->required(),
+            ]),
+        ];
+    }
+
+    private static function routeParams(Account $record, array $data): array
+    {
+        return ['account' => $record->id, 'from' => $data['from'], 'to' => $data['to']];
     }
 }

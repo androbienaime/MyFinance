@@ -15,16 +15,11 @@ class CustomerStatementActions
             ->label('Télécharger le relevé (PDF)')
             ->icon('heroicon-o-arrow-down-tray')
             ->color('gray')
-            ->schema([
-                Grid::make(2)->schema([
-                    DatePicker::make('from')->label('Du')->default(now()->subMonth())->required(),
-                    DatePicker::make('to')->label('Au')->default(now())->required(),
-                ]),
-            ])
+            ->schema(self::dateRangeSchema())
             ->visible(fn (Customer $record) => auth()->user()->can('view', $record))
             ->modalSubmitActionLabel('Télécharger')
             ->action(fn (Customer $record, array $data) => redirect()->to(
-                route('statements.customer.download', ['customer' => $record->id, 'from' => $data['from'], 'to' => $data['to']])
+                route('statements.customer.download', self::routeParams($record, $data))
             ));
     }
 
@@ -34,16 +29,36 @@ class CustomerStatementActions
             ->label('Aperçu / Imprimer')
             ->icon('heroicon-o-printer')
             ->color('gray')
-            ->schema([
-                Grid::make(2)->schema([
-                    DatePicker::make('from')->label('Du')->default(now()->subMonth())->required(),
-                    DatePicker::make('to')->label('Au')->default(now())->required(),
-                ]),
-            ])
+            ->schema(self::dateRangeSchema())
             ->visible(fn (Customer $record) => auth()->user()->can('view', $record))
             ->modalSubmitActionLabel('Voir l\'aperçu')
-            ->action(fn (Customer $record, array $data) => redirect()->away(
-                route('statements.customer.print', ['customer' => $record->id, 'from' => $data['from'], 'to' => $data['to']])
+            ->action(fn (Customer $record, array $data) => redirect()->to(
+                route('statements.customer.print', self::routeParams($record, $data))
             ));
+    }
+
+    private static function dateRangeSchema(): array
+    {
+        return [
+            Grid::make(2)->schema([
+                DatePicker::make('from')
+                    ->label('Du')
+                    ->default(now()->subMonth())
+                    ->maxDate(now())
+                    ->required(),
+
+                DatePicker::make('to')
+                    ->label('Au')
+                    ->default(now())
+                    ->maxDate(now())
+                    ->afterOrEqual('from')
+                    ->required(),
+            ]),
+        ];
+    }
+
+    private static function routeParams(Customer $record, array $data): array
+    {
+        return ['customer' => $record->id, 'from' => $data['from'], 'to' => $data['to']];
     }
 }

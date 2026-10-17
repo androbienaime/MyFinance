@@ -211,7 +211,12 @@
             <div class="account-block">
                 <div class="account-title">
                     <span>{{ $account->code }} — {{ $account->typeOfAccount->name }}</span>
-                    <span class="balance">{{ number_format($account->balance, 2) }} {{ $account->currency->iso_code }}</span>
+                    {{-- Solde a la fin de la periode, pas le solde actuel : sur un
+                        releve passe, afficher le solde actuel serait trompeur. --}}
+                    <span class="balance">
+                        Solde au {{ $to->format('d/m/Y') }} :
+                        {{ number_format($account->closingBalance, 2) }} {{ $account->currency->iso_code }}
+                    </span>
                 </div>
                 <table>
                     <thead>
@@ -220,20 +225,31 @@
                             <th>Code</th>
                             <th>Type</th>
                             <th>Montant</th>
+                            <th>Solde</th>
                             <th>Statut</th>
                         </tr>
                     </thead>
                     <tbody>
+                        <tr style="background:#eff6ff;">
+                            <td colspan="5"><strong>Solde d'ouverture</strong> ({{ $from->format('d/m/Y') }})</td>
+                            <td style="text-align:right;">
+                                <strong>{{ number_format($account->openingBalance, 2) }} {{ $account->currency->iso_code }}</strong>
+                            </td>
+                        </tr>
+
                         @forelse ($account->periodTransactions as $t)
                             <tr>
                                 <td>{{ $t->created_at->format('d/m/Y H:i') }}</td>
                                 <td>{{ $t->code }}</td>
                                 <td>{{ $t->type->label() }}</td>
-                                <td>{{ $t->currency->iso_code }} {{ number_format($t->amount, 2) }}</td>
+                                <td>{{ $t->currency?->iso_code }} {{ number_format($t->amount, 2) }}</td>
+                                 <td style="font-weight:bold;">
+                                   {{ $t->currency?->iso_code }}  {{ $t->balance_after !== null ? number_format($t->balance_after, 2) : '—' }}
+                                </td>
                                 <td><span class="status-badge">{{ $t->status->value }}</span></td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" style="text-align:center; color:#94a3b8;">Aucune transaction sur cette période.</td></tr>
+                            <tr><td colspan="6" style="text-align:center; color:#94a3b8;">Aucune transaction sur cette période.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
