@@ -235,9 +235,11 @@
         <div class="header">
             <div class="brand">
                 <div class="brand-mark">
-                    <img src="{{ asset('images/logo.png') }}" alt="{{ env('APP_NAME') }}" class="brand-logo" width="68" height="68">
+                    @if ($logoSrc)
+                        <img src="{{ $logoSrc }}" alt="{{ config('app.name') }}" class="brand-logo" width="68" height="68">
+                    @endif
                 </div>
-                <div>
+                <div style="display:flex; flex-direction:column; margin-top: 35px;">
                     <h1>Relevé de compte</h1>
                     <p class="brand-sub">{{ env('APP_NAME') }}</p>
                 </div>
