@@ -67,6 +67,23 @@ class StatementController extends Controller
         return [$from->startOfDay(), $to->endOfDay()];
     }
 
+    /**
+     * Logo integre en base64 : DomPDF ne telecharge pas les images
+     * distantes (asset() genere une URL http://), alors que le navigateur
+     * le fait sans probleme. Le data URI fonctionne pour l'apercu comme
+     * pour le PDF.
+     */
+    private function logoDataUri(): ?string
+    {
+        $path = public_path('images/logo.png');
+
+        if (! is_file($path)) {
+            return null;
+        }
+
+        return 'data:image/png;base64,' . base64_encode(file_get_contents($path));
+    }
+
     private function buildAccountStatementData(Account $account, Request $request): array
     {
         [$from, $to] = $this->resolvePeriod($request);
@@ -93,6 +110,7 @@ class StatementController extends Controller
             'from' => $from,
             'to' => $to,
             'generatedAt' => now(),
+            'logoSrc' => $this->logoDataUri(),
         ];
     }
 
@@ -126,6 +144,7 @@ class StatementController extends Controller
             'from' => $from,
             'to' => $to,
             'generatedAt' => now(),
+            'logoSrc' => $this->logoDataUri(),
         ];
     }
 

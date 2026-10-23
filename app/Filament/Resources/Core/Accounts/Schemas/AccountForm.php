@@ -172,7 +172,9 @@ class AccountForm
                 'accountPeople',
                 modifyQueryUsing: fn (Builder $query) => $query->where('role', '!=', 'owner')
             )
-            ->label('')
+            ->label('Personnes autorisées')
+            ->addActionLabel('Ajouter une personne')
+            ->defaultItems(0)
             ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => static::persistAddressAndStrip($data))
             ->mutateRelationshipDataBeforeSaveUsing(fn (array $data): array => static::persistAddressAndStrip($data))
             ->schema([
