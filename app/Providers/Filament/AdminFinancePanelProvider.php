@@ -21,6 +21,7 @@ use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -29,6 +30,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminFinancePanelProvider extends PanelProvider
@@ -131,6 +133,36 @@ class AdminFinancePanelProvider extends PanelProvider
             ->globalSearch(true)
             ->plugins([
                 // LanguageSwitch::make(),
-            ]);
+            ])->renderHook(
+                    PanelsRenderHook::HEAD_END,
+                    function (): HtmlString {
+                        $collapsed = collect(filament()->getNavigationGroups())
+                            ->filter(fn ($group) => $group instanceof NavigationGroup && $group->isCollapsed())
+                            ->map(fn (NavigationGroup $group) => $group->getLabel())
+                            ->filter()
+                            ->values()
+                            ->all();
+
+                        $json = json_encode($collapsed, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP);
+
+                        return new HtmlString(<<<HTML
+                        <script data-cfasync="false">
+                        (function () {
+                            try {
+                                var key = 'collapsedGroups';
+                                var raw = localStorage.getItem(key);
+                                var valid = false;
+                                if (raw !== null) {
+                                    try { valid = Array.isArray(JSON.parse(raw)); } catch (e) {}
+                                }
+                                if (!valid) {
+                                    localStorage.setItem(key, JSON.stringify({$json}));
+                                }
+                            } catch (e) {}
+                        })();
+                        </script>
+                        HTML);
+                    },
+                );
     }
 }
