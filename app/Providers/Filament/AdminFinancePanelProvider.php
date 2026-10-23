@@ -134,35 +134,10 @@ class AdminFinancePanelProvider extends PanelProvider
             ->plugins([
                 // LanguageSwitch::make(),
             ])->renderHook(
-                    PanelsRenderHook::HEAD_END,
-                    function (): HtmlString {
-                        $collapsed = collect(filament()->getNavigationGroups())
-                            ->filter(fn ($group) => $group instanceof NavigationGroup && $group->isCollapsed())
-                            ->map(fn (NavigationGroup $group) => $group->getLabel())
-                            ->filter()
-                            ->values()
-                            ->all();
-
-                        $json = json_encode($collapsed, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP);
-
-                        return new HtmlString(<<<HTML
-                        <script data-cfasync="false">
-                        (function () {
-                            try {
-                                var key = 'collapsedGroups';
-                                var raw = localStorage.getItem(key);
-                                var valid = false;
-                                if (raw !== null) {
-                                    try { valid = Array.isArray(JSON.parse(raw)); } catch (e) {}
-                                }
-                                if (!valid) {
-                                    localStorage.setItem(key, JSON.stringify({$json}));
-                                }
-                            } catch (e) {}
-                        })();
-                        </script>
-                        HTML);
-                    },
-                );
+                PanelsRenderHook::HEAD_END,
+                fn () => new \Illuminate\Support\HtmlString(
+                    '<script src="' . asset('js/sidebar-guard.js') . '?v=1" data-cfasync="false"></script>'
+                ),
+            );
     }
 }
