@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'idempotency' => \App\Http\Middleware\EnsureIdempotentRequest::class,
 
         ]);
+
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
     })
     ->withExceptions(function (Exceptions $exceptions) {
          $exceptions->render(function (ProtectedDeletionException $e, $request) {
