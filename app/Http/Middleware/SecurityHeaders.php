@@ -17,6 +17,16 @@ class SecurityHeaders
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
         $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 
+          // --- Désactive les API navigateur inutiles pour une app finance ---
+        $response->headers->set(
+            'Permissions-Policy',
+            'camera=(), microphone=(), geolocation=(), payment=()'
+        );
+ 
+        // --- Isolation cross-origin ---
+        $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
+        $response->headers->set('Cross-Origin-Resource-Policy', 'same-origin');
+ 
         return $response;
     }
 }
