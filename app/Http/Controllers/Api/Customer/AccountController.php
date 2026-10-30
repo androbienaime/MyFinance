@@ -57,8 +57,8 @@ class AccountController extends Controller
 
         $account = $customer->accounts()->where('code', $accountCode)->firstOrFail();
 
-        $transactions = $account->transactions()
-            ->with('counterpartyAccount')
+       $transactions = $account->transactions()
+            ->with(['counterpartyAccount', 'tagsPayments'])   // ← ajout de tagsPayments
             ->latest()
             ->paginate(20);
 
@@ -73,6 +73,9 @@ class AccountController extends Controller
                 'counterparty_account_code' => $t->counterpartyAccount?->code,
                 'initiated_by' => $t->employee_id ? 'employee' : ($t->initiated_by_customer_id ? 'customer' : null),
                 'created_at' => $t->created_at,
+                'tags_payments' => $t->tagsPayments->map(fn ($p) => [   // ← ajout
+                    'case_number' => $p->tags,   // ADAPTEZ : colonne du numéro de case dans tags_payments
+                ]),
             ]),
             'meta' => [
                 'current_page' => $transactions->currentPage(),
@@ -80,5 +83,6 @@ class AccountController extends Controller
                 'total' => $transactions->total(),
             ],
         ]);
+
     }
 }

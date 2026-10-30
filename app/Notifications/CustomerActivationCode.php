@@ -42,10 +42,12 @@ class CustomerActivationCode extends Notification implements ShouldQueue
 
     public function toMail($notifiable): MailMessage
     {
+        $lien = config('app.frontend_url') . '/activation?code=' . $this->code . '&identifier=' . urlencode($notifiable->email);
+        
         return (new MailMessage)
             ->line('Code d\'activation de votre compte.')
             ->line('Votre code : ' . $this->code)
-            ->action('Activer mon compte', url('/customer/activate'))
+            ->action('Activer mon compte', $lien)
             ->line('Merci d\'utiliser notre application!');
     }
 

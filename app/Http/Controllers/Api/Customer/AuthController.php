@@ -63,7 +63,7 @@ class AuthController extends Controller
                 'expires_at' => $result['expires_at'],
                 'customer' => [
                     'id' => $result['customer']->id,
-                    'name' => $result['customer']->full_name ?? $result['customer']->name,
+                    'name' => $result['customer']->person->full_name ?? $result['customer']->person->lastname,
                 ],
             ]);
         } catch (TransactionRejectedException $e) {
