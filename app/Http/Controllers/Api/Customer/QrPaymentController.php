@@ -23,6 +23,7 @@ class QrPaymentController extends Controller
                 'reference' => $payment->reference,
                 'status' => $payment->status->value,
                 'description' => $payment->description,
+                'requires_pin' => $request->user('customer')->hasPin(),
                 'merchant' => [
                     'business_name' => $payment->merchantProfile->business_name,
                     'category' => $payment->merchantProfile->category,
@@ -54,6 +55,10 @@ class QrPaymentController extends Controller
         ]);
 
         $customer = $request->user('customer');
+        if ($customer->hasPin()) {
+            $request->validate(['pin' => ['required', 'digits:6']]);
+            app(\App\Services\CustomerPinService::class)->assertValid($customer, $request->input('pin'));
+        }
 
         try {
             $payment = $action->handle($reference, $customer, $data['account_code'], $data['pin'] ?? null);

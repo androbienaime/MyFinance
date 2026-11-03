@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Core\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use App\Services\CustomerPinService;
 
 class AuthController extends Controller
 {
@@ -57,6 +58,7 @@ class AuthController extends Controller
             $result = $action->handle($data['identifier'], $data['password'], $data['device_name'] ?? null);
 
             RateLimiter::clear($throttleKey);
+            app(CustomerPinService::class)->resetAttempts($result['customer']);
 
             return response()->json([
                 'token' => $result['token'],
@@ -64,6 +66,8 @@ class AuthController extends Controller
                 'customer' => [
                     'id' => $result['customer']->id,
                     'name' => $result['customer']->person->full_name ?? $result['customer']->person->lastname,
+                    'has_pin' => $result['customer']->hasPin(),   // ← nouveau
+
                 ],
             ]);
         } catch (TransactionRejectedException $e) {
