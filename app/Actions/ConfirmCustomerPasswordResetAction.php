@@ -15,7 +15,7 @@ class ConfirmCustomerPasswordResetAction
 
     public function handle(string $identifier, string $code, string $newPassword): void
     {
-        $customer = Customer::where('email', $identifier)->orWhere('phone', $identifier)->firstOrFail();
+        $customer = Customer::where('email', $identifier)->orWhere('phone_number', $identifier)->firstOrFail();
 
         $reset = CustomerPasswordReset::where('customer_id', $customer->id)
             ->where('status', 'pending')

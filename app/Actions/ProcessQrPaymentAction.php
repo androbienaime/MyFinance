@@ -40,7 +40,7 @@ class ProcessQrPaymentAction
                 throw new TransactionRejectedException('Ce code QR a expire.');
             }
 
-            if ($customer->hasPinSet()) {
+            if ($customer->hasPin()) {
                 if (! $pin) {
                     throw new TransactionRejectedException('Un code PIN est requis pour ce paiement.');
                 }
@@ -50,7 +50,7 @@ class ProcessQrPaymentAction
                     throw new TransactionRejectedException('Trop de tentatives de PIN incorrectes. Paiement annule.');
                 }
 
-                if (! $customer->verifyPin($pin)) {
+                if (! $customer->checkPin($pin)) {
                     $paymentRequest->increment('pin_attempts');
                     throw new TransactionRejectedException('Code PIN incorrect.');
                 }

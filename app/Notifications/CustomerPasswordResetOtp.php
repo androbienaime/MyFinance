@@ -38,6 +38,10 @@ class CustomerPasswordResetOtp extends Notification implements ShouldQueue
 
     public function toMail($notifiable): MailMessage
     {
+        if(app()->environment('local')) {
+            \Log::info('Sending password reset OTP email to: ' . $notifiable->email . ' with code: ' . $this->code);
+        }
+
         return (new MailMessage)
             ->line('Code de réinitialisation de votre mot de passe.')
             ->line('Votre code : ' . $this->code)

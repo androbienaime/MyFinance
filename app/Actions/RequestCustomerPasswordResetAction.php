@@ -12,7 +12,7 @@ class RequestCustomerPasswordResetAction
 {
     public function handle(string $identifier): void
     {
-        $customer = Customer::where('email', $identifier)->orWhere('phone', $identifier)->first();
+        $customer = Customer::where('email', $identifier)->orWhere('phone_number', $identifier)->first();
 
         // Ne jamais reveler si l'identifiant existe ou non - reponse
         // identique dans les deux cas, cote controleur.

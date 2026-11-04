@@ -4,6 +4,7 @@ namespace App\Models\Core;
 
 use App\Contracts\Deletable;
 use App\Models\Concerns\HasDeletionGuard;
+use App\Models\Concerns\HasPin;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,13 +12,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class Customer extends Authenticatable implements Deletable
 {
-    use HasFactory, SoftDeletes, HasDeletionGuard, Notifiable, HasApiTokens;
+    use HasFactory, SoftDeletes, HasDeletionGuard, Notifiable, HasApiTokens, HasPin;
 
     protected $fillable = [
         'code',
@@ -35,6 +35,8 @@ class Customer extends Authenticatable implements Deletable
         'activated_at',
         'is_active',
         'password_changed_at',
+        'pin_hash',
+        'pin_set_at',
     ];
 
     protected $hidden = [
@@ -121,21 +123,5 @@ class Customer extends Authenticatable implements Deletable
     }
 
 
-    public function hasPinSet(): bool
-    {
-        return ! is_null($this->pin_hash);
-    }
-
-    public function setPin(string $pin): void
-    {
-        $this->update([
-            'pin_hash' => Hash::make($pin),
-            'pin_set_at' => now(),
-        ]);
-    }
-
-    public function verifyPin(string $pin): bool
-    {
-        return $this->pin_hash && Hash::check($pin, $this->pin_hash);
-    }
+   
 }

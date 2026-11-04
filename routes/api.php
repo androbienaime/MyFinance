@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\P2pTransferController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Merchant\QrPaymentController as MerchantQrPaymentController;
 use App\Http\Controllers\Api\Customer\QrPaymentController as CustomerQrPaymentController;
+use App\Http\Controllers\Api\Customer\PinController;
 
 
 Route::prefix('customer')->group(function () {
@@ -45,6 +46,16 @@ Route::prefix('customer')->group(function () {
             Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
             Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
         });
+
+
+        Route::prefix('pin')->group(function () {
+        Route::get('/', [PinController::class, 'show']);            // un PIN existe ?
+        Route::post('/', [PinController::class, 'store']);          // création : pin, pin_confirmation
+        Route::put('/', [PinController::class, 'update']);          // modification : current_pin, pin, pin_confirmation
+        Route::delete('/', [PinController::class, 'destroy']);      // désactivation : current_pin
+        Route::post('/verify', [PinController::class, 'verify'])->middleware('throttle:20,1');
+        Route::post('/reset', [PinController::class, 'reset'])->middleware('throttle:10,1');  // PIN oublié : password, pin, pin_confirmation
+    });
     });
 });
 
