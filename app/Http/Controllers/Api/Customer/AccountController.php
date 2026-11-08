@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Customer;
 
+use App\Enums\TransactionType;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
@@ -57,8 +58,8 @@ class AccountController extends Controller
 
         $account = $customer->accounts()->where('code', $accountCode)->firstOrFail();
 
-       $transactions = $account->transactions()
-            ->with(['counterpartyAccount', 'tagsPayments'])   // ← ajout de tagsPayments
+        $transactions = $account->transactions()
+            ->with(['counterpartyAccount', 'tagsPayments', 'qrPaymentRequest.merchantProfile'])
             ->latest()
             ->paginate(20);
 
@@ -71,9 +72,12 @@ class AccountController extends Controller
                 'amount' => (float) $t->amount,
                 'status' => $t->status->value,
                 'counterparty_account_code' => $t->counterpartyAccount?->code,
+                'merchant_name' => $t->type === TransactionType::QrPayment
+                    ? $t->qrPaymentRequest?->merchantProfile?->business_name
+                    : null,
                 'initiated_by' => $t->employee_id ? 'employee' : ($t->initiated_by_customer_id ? 'customer' : null),
                 'created_at' => $t->created_at,
-                'tags_payments' => $t->tagsPayments->map(fn ($p) => [   // ← ajout
+                'tags_payments' => $t->tagsPayments->map(fn ($p) => [
                     'case_number' => $p->tags,   // ADAPTEZ : colonne du numéro de case dans tags_payments
                 ]),
             ]),
@@ -83,6 +87,5 @@ class AccountController extends Controller
                 'total' => $transactions->total(),
             ],
         ]);
-
     }
 }

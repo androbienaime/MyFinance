@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Transaction extends Model
@@ -75,6 +76,10 @@ class Transaction extends Model
         return $this->hasMany(TagsPayment::class);
     }
    
+    public function qrPaymentRequest(): HasOne
+    {
+        return $this->hasOne(QrPaymentRequest::class, 'transaction_id');
+    }
 
     public static function generateUniqueCode(int $attempts = 5): string
     {
