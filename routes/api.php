@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Merchant\QrPaymentController as MerchantQrPaymentController;
 use App\Http\Controllers\Api\Customer\QrPaymentController as CustomerQrPaymentController;
 use App\Http\Controllers\Api\Customer\PinController;
-
+use App\Http\Controllers\Api\Customer\QrPaymentEstimateController;
 
 Route::prefix('customer')->group(function () {
     // Public - avant authentification
@@ -38,7 +38,9 @@ Route::prefix('customer')->group(function () {
         Route::prefix('qr-payments')->group(function () {
             Route::get('/{reference}', [CustomerQrPaymentController::class, 'show']);
             Route::post('/{reference}/pay', [CustomerQrPaymentController::class, 'pay'])->middleware('throttle:10,1');
+            Route::get('/{reference}/estimate', [QrPaymentEstimateController::class, '__invoke']);
         });
+
 
         Route::prefix('notifications')->group(function () {
             Route::get('/', [NotificationController::class, 'index']);
