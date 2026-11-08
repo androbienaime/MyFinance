@@ -3,6 +3,7 @@
 // routes/api.php
 use App\Http\Controllers\Api\Customer\AccountController;
 use App\Http\Controllers\Api\Customer\AuthController;
+use App\Http\Controllers\Api\Customer\CustomerStatementController;
 use App\Http\Controllers\Api\Merchant\AuthController as MerchantAuthController;
 use App\Http\Controllers\Api\Customer\NotificationController;
 use App\Http\Controllers\Api\Merchant\ApiKeyController;
@@ -51,13 +52,18 @@ Route::prefix('customer')->group(function () {
 
 
         Route::prefix('pin')->group(function () {
-        Route::get('/', [PinController::class, 'show']);            // un PIN existe ?
-        Route::post('/', [PinController::class, 'store']);          // création : pin, pin_confirmation
-        Route::put('/', [PinController::class, 'update']);          // modification : current_pin, pin, pin_confirmation
-        Route::delete('/', [PinController::class, 'destroy']);      // désactivation : current_pin
-        Route::post('/verify', [PinController::class, 'verify'])->middleware('throttle:20,1');
-        Route::post('/reset', [PinController::class, 'reset'])->middleware('throttle:10,1');  // PIN oublié : password, pin, pin_confirmation
-    });
+            Route::get('/', [PinController::class, 'show']);            // un PIN existe ?
+            Route::post('/', [PinController::class, 'store']);          // création : pin, pin_confirmation
+            Route::put('/', [PinController::class, 'update']);          // modification : current_pin, pin, pin_confirmation
+            Route::delete('/', [PinController::class, 'destroy']);      // désactivation : current_pin
+            Route::post('/verify', [PinController::class, 'verify'])->middleware('throttle:20,1');
+            Route::post('/reset', [PinController::class, 'reset'])->middleware('throttle:10,1');  // PIN oublié : password, pin, pin_confirmation
+        });
+
+        // Historique des relevés de compte (PDF) : lien de téléchargement ou affichage dans le navigateur
+        Route::get('/accounts/{accountCode}/statement', [CustomerStatementController::class, 'show']);
+        Route::get('/accounts/{accountCode}/statement/link', [CustomerStatementController::class, 'link']);
+
     });
 });
 

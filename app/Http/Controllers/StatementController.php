@@ -47,6 +47,18 @@ class StatementController extends Controller
         return $pdf->download("releve-client-{$customer->code}.pdf");
     }
 
+    // Downloaded from a signed URL, without authentication. The signature is verified by the "signed" middleware.
+    public function downloadSignedAccountPdf(Request $request, string $code)
+    {
+        // Pas d'authentification ici : l'accès est protégé par la signature du lien (middleware « signed »).
+        $account = Account::where('code', $code)->firstOrFail();
+    
+        $pdf = Pdf::loadView('statements.account', $this->buildAccountStatementData($account, $request))
+            ->setPaper('a4');
+    
+        return $pdf->download("releve-{$account->code}.pdf");
+    }
+
     /**
      * Periode normalisee : debut de journee / fin de journee. Indispensable
      * pour que la liste des transactions et le calcul du solde d'ouverture
