@@ -87,6 +87,10 @@ class Customer extends Authenticatable implements Deletable
         return $this->morphMany(Address::class, 'addressable');
     }
 
+    public function pushTokens(): HasMany
+    {
+        return $this->hasMany(PushToken::class);
+    }
 
     public function routeNotificationForWhatsApp(): ?string
     {

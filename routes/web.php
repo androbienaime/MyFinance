@@ -38,5 +38,9 @@ Route::middleware(['web', 'auth'])->group(function () {
         ->name('system-updates.log');
 });
 
-
+Route::get('/statements/mobile/{code}/download', [StatementController::class, 'downloadSignedAccountPdf'])
+    ->middleware(['web', 'signed'])
+    ->name('statements.mobile.download');
+ 
+    
 require __DIR__.'/auth.php';

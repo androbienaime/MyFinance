@@ -54,7 +54,7 @@ class QrPaymentConfirmed extends Notification implements ShouldQueue
             'type' => 'qr_payment_confirmed',
             'amount' => (float) $this->payment->total_amount,
             'merchant_name' => $this->merchant->business_name,
-            'message' => "Paiement de {$this->payment->total_amount} HTG confirme chez {$this->merchant->business_name}.",
+            'message' => "Paiement de {$this->payment->total_amount} {$this->payment->currency->iso_code} confirmé chez {$this->merchant->business_name}.",
         ];
     }
 }

@@ -20,6 +20,9 @@ class ProcessQrPaymentAction
 {
     private const MAX_PIN_ATTEMPTS = 3;
 
+    /** Montants réellement débités (devise du compte payeur), lus par le contrôleur pour la réponse de /pay. */
+    public ?array $debited = null;
+
     public function handle(string $reference, Customer $customer, string $payingAccountCode, ?string $pin = null): QrPaymentRequest
     {
         return DB::transaction(function () use ($reference, $customer, $payingAccountCode, $pin) {
@@ -111,6 +114,15 @@ class ProcessQrPaymentAction
             if ($totalToDebit > $payingAccount->availableBalance()) {
                 throw new TransactionRejectedException('Solde disponible insuffisant.');
             }
+
+            $debitedCurrency = $payingAccount->currency;
+            $this->debited = [
+                'amount' => $amountToDebit,
+                'fee_amount' => $feeToDebit,
+                'total_amount' => $totalToDebit,
+                'currency' => ['code' => $debitedCurrency->iso_code ?? $debitedCurrency->code],
+                'exchange_rate' => $exchangeRateApplied,
+            ];
 
             $feesAccount = null;
 

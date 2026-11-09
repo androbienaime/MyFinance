@@ -41,6 +41,9 @@ class QrPaymentController extends Controller
                 // dans une devise differente de celle du marchand.
                 'converted' => $result['converted'],
                 'expires_at' => $payment->expires_at,
+                // Heure du serveur : l'application ne se fie jamais a l'horloge du telephone.
+                'server_time' => now()->toIso8601String(),
+                'is_expired' => $payment->isExpired(),
             ]);
         } catch (TransactionRejectedException $e) {
             return response()->json(['message' => $e->getMessage()], 404);
@@ -70,6 +73,8 @@ class QrPaymentController extends Controller
                     'code' => $payment->currency->iso_code,
                 ],
                 'paid_at' => $payment->paid_at,
+                // Montant reellement debite sur le compte du client (devise du compte, conversion comprise).
+                'debited' => $action->debited,
             ]);
         } catch (TransactionRejectedException $e) {
             return response()->json(['message' => $e->getMessage()], 422);

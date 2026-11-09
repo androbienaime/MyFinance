@@ -41,5 +41,7 @@ return [
         'api_version'     => env('WHATSAPP_API_VERSION', 'v20.0'),
     ],
 
-
+    'expo' => [
+        'access_token' => env('EXPO_ACCESS_TOKEN'),
+    ],
 ];

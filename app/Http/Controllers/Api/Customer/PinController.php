@@ -94,7 +94,7 @@ class PinController extends Controller
     {
         $customer = $request->user('customer');
 
-        $request->validate(['current_pin' => ['required', 'digits:4,6']]);
+        $request->validate(['current_pin' => ['required', 'digits:6']]);
         $this->pins->assertValid($customer, $request->input('current_pin'));
 
         $customer->clearPin();

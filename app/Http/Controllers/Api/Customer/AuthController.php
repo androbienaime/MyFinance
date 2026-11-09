@@ -9,6 +9,7 @@ use App\Actions\RequestCustomerPasswordResetAction;
 use App\Exceptions\TransactionRejectedException;
 use App\Http\Controllers\Controller;
 use App\Models\Core\Customer;
+use App\Models\Core\PushToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use App\Services\CustomerPinService;
@@ -79,14 +80,20 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user('customer')->currentAccessToken()->delete();
+        $customer = $request->user('customer')->currentAccessToken()->delete();
+
+        if ($token = $request->header('X-Push-Token')) {
+            PushToken::where('token', $token)->where('customer_id', $customer->id)->delete();
+        }
 
         return response()->json(['message' => 'Deconnecte.']);
     }
 
     public function logoutAllDevices(Request $request)
     {
-        $request->user('customer')->tokens()->delete();
+        $customer = $request->user('customer')->tokens()->delete();
+
+        PushToken::where('customer_id', $customer->id)->delete();
 
         return response()->json(['message' => 'Deconnecte de tous les appareils.']);
     }
