@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Customer\AuthController;
 use App\Http\Controllers\Api\Customer\CustomerStatementController;
 use App\Http\Controllers\Api\Merchant\AuthController as MerchantAuthController;
 use App\Http\Controllers\Api\Customer\NotificationController;
+use App\Http\Controllers\Api\Customer\PasswordController;
 use App\Http\Controllers\Api\Merchant\ApiKeyController;
 use App\Http\Controllers\Api\Merchant\ProfileController;
 use App\Http\Controllers\Api\Merchant\SalesController;
@@ -68,6 +69,7 @@ Route::prefix('customer')->group(function () {
         Route::post('/push-tokens', [PushTokenController::class, 'store']);
         Route::delete('/push-tokens', [PushTokenController::class, 'destroy']);
  
+        Route::post('/password', [PasswordController::class, 'change'])->middleware('throttle:5,1');
     });
 });
 
