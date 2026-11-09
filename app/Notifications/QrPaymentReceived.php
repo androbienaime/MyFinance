@@ -52,7 +52,7 @@ class QrPaymentReceived extends Notification implements ShouldQueue
             'type' => 'qr_payment_received',
             'amount' => (float) $this->payment->amount,
             'reference' => $this->payment->reference,
-            'message' => "Paiement recu : {$this->payment->amount} HTG.",
+            'message' => "Paiement recu : {$this->payment->amount} {$this->payment->currency->iso_code}.",
         ];
     }
 }

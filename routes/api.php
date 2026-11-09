@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Merchant\QrPaymentController as MerchantQrPaymentController;
 use App\Http\Controllers\Api\Customer\QrPaymentController as CustomerQrPaymentController;
 use App\Http\Controllers\Api\Customer\PinController;
+use App\Http\Controllers\Api\Customer\PushTokenController;
 use App\Http\Controllers\Api\Customer\QrPaymentEstimateController;
 
 Route::prefix('customer')->group(function () {
@@ -64,6 +65,9 @@ Route::prefix('customer')->group(function () {
         Route::get('/accounts/{accountCode}/statement', [CustomerStatementController::class, 'show']);
         Route::get('/accounts/{accountCode}/statement/link', [CustomerStatementController::class, 'link']);
 
+        Route::post('/push-tokens', [PushTokenController::class, 'store']);
+        Route::delete('/push-tokens', [PushTokenController::class, 'destroy']);
+ 
     });
 });
 
