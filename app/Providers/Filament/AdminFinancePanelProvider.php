@@ -136,6 +136,7 @@ class AdminFinancePanelProvider extends PanelProvider
             ])->renderHook(
                 PanelsRenderHook::HEAD_END,
                 fn () => new \Illuminate\Support\HtmlString(
+                    '<meta name="robots" content="noindex, nofollow, noarchive">'.
                     '<script src="' . asset('js/sidebar-guard.js') . '?v=1" data-cfasync="false"></script>'
                 ),
             );
