@@ -7,6 +7,7 @@ use App\Exceptions\TransactionRejectedException;
 use App\Filament\Actions\GuardedDeleteAction;
 use App\Filament\Actions\GuardedDeleteBulkAction;
 use App\Filament\Resources\Core\Accounts\Tables\Actions\AccountStatementActions;
+use App\Filament\Resources\Core\Customers\CustomerResource;
 use App\Models\Core\Account;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -40,6 +41,9 @@ class AccountsTable
                     ->searchable(),
                 TextColumn::make('customer.person.full_name')
                     ->label(__('myfinance.full_name'))
+                     ->url(fn (Account $record) => $record->customer_id
+                        ? CustomerResource::getUrl('view', ['record' => $record->customer_id])
+                        : null)
                     ->searchable(query: function (Builder $query, string $search): Builder {
                         return $query->orWhereHas('customer.person', function (Builder $q) use ($search) {
                             $q->where('first_name', 'like', "%{$search}%")

@@ -8,6 +8,8 @@ use App\Enums\TransactionDirection;
 use App\Enums\TransactionStatus;
 use App\Enums\TransactionType;
 use App\Exceptions\TransactionRejectedException;
+use App\Filament\Resources\Core\Customers\CustomerResource;
+use App\Models\Core\Account;
 use App\Models\Core\Branch;
 use App\Models\Core\Currency;
 use App\Models\Core\Employee;
@@ -38,7 +40,11 @@ trait TransactionsTableTrait
                 TextColumn::make('account.code')->label(__('myfinance.account'))->searchable(),
 
                 TextColumn::make('account.customer.person.full_name')
-                    ->label(__('myfinance.customer'))
+                    ->label(__('myfinance.full_name'))
+                    ->url(fn (Transaction $record) => $record->account?->customer_id
+                        ? CustomerResource::getUrl('view', ['record' => $record->account->customer_id])
+                        : null)
+                    // ->color('secondary')
                     ->formatStateUsing(fn ($record) => $record->account?->customer?->person
                         ? "{$record->account->customer->person->first_name} {$record->account->customer->person->last_name}"
                         : '-'),
