@@ -90,7 +90,6 @@ class ProcessQrPaymentAction
             $totalInMerchantCurrency = (float) $paymentRequest->total_amount;
 
             $exchangeRateApplied = 1.0;
-            $totalToDebit = $totalInMerchantCurrency;
             $amountToDebit = $amountInMerchantCurrency;
             $feeToDebit = $feeInMerchantCurrency;
 
@@ -98,7 +97,6 @@ class ProcessQrPaymentAction
                 $merchantCurrency = $merchantAccount->currency;
                 $payingCurrency = $payingAccount->currency;
 
-                $totalToDebit = $merchantCurrency->convertTo($totalInMerchantCurrency, $payingCurrency);
                 $amountToDebit = $merchantCurrency->convertTo($amountInMerchantCurrency, $payingCurrency);
                 $feeToDebit = $merchantCurrency->convertTo($feeInMerchantCurrency, $payingCurrency);
 
@@ -110,6 +108,12 @@ class ProcessQrPaymentAction
                     ? round($amountToDebit / $amountInMerchantCurrency, 6)
                     : 1.0;
             }
+
+            // Le total debite est la somme des deux montants converts (et non
+            // une conversion separee du total) : c'est exactement ce qui sera
+            // decremente du solde, donc la verification de solde reste coherente
+            // meme avec l'arrondi a decimal_places.
+            $totalToDebit = $amountToDebit + $feeToDebit;
 
             if ($totalToDebit > $payingAccount->availableBalance()) {
                 throw new TransactionRejectedException('Solde disponible insuffisant.');
@@ -125,6 +129,8 @@ class ProcessQrPaymentAction
             ];
 
             $feesAccount = null;
+            $feeToCredit = $feeToDebit;
+            $feeExchangeRateApplied = 1.0;
 
             if ($feeToDebit > 0) {
                 $feesAccount = Account::where('code', setting('financial.fees_account_code'))
@@ -135,6 +141,24 @@ class ProcessQrPaymentAction
                 if (! $feesAccount) {
                     throw new TransactionRejectedException('Compte de frais introuvable - contactez un administrateur.');
                 }
+
+                // Le compte de frais peut etre dans une devise differente de
+                // celle du payeur : on convertit le montant a crediter.
+                if ($feesAccount->currency_id === $payingAccount->currency_id) {
+                    $feeToCredit = $feeToDebit;
+                } elseif ($feesAccount->currency_id === $merchantAccount->currency_id) {
+                    $feeToCredit = $feeInMerchantCurrency;
+                } else {
+                    // Conversion depuis la devise d'origine (marchand) pour
+                    // eviter un double arrondi.
+                    $feeToCredit = $merchantAccount->currency->convertTo($feeInMerchantCurrency, $feesAccount->currency);
+                }
+
+                // Taux effectif reellement applique entre le debit (devise
+                // payeur) et le credit (devise du compte de frais).
+                $feeExchangeRateApplied = $feeToCredit !== $feeToDebit
+                    ? round($feeToCredit / $feeToDebit, 6)
+                    : 1.0;
             }
 
             $mainTransaction = $this->createLegsAndApplyBalances(
@@ -144,7 +168,9 @@ class ProcessQrPaymentAction
                 amountToDebit: $amountToDebit,
                 amountToCredit: $amountInMerchantCurrency, // le marchand recoit toujours dans SA devise, montant inchange
                 feeToDebit: $feeToDebit,
+                feeToCredit: $feeToCredit,
                 exchangeRateApplied: $exchangeRateApplied,
+                feeExchangeRateApplied: $feeExchangeRateApplied,
             );
 
             $paymentRequest->update([
@@ -169,7 +195,9 @@ class ProcessQrPaymentAction
         float $amountToDebit,
         float $amountToCredit,
         float $feeToDebit,
+        float $feeToCredit,
         float $exchangeRateApplied,
+        float $feeExchangeRateApplied = 1.0,
     ): Transaction {
         $debitMain = Transaction::create([
             'account_id' => $payingAccount->id,
@@ -208,6 +236,7 @@ class ProcessQrPaymentAction
                 'direction' => TransactionDirection::Debit,
                 'code' => Transaction::generateUniqueCode(),
                 'amount' => $feeToDebit,
+                'exchange_rate_applied' => $feeExchangeRateApplied,
                 'employee_id' => null,
                 'type' => TransactionType::QrPaymentFee,
                 'status' => TransactionStatus::Completed,
@@ -219,14 +248,15 @@ class ProcessQrPaymentAction
                 'currency_id' => $feesAccount->currency_id,
                 'direction' => TransactionDirection::Credit,
                 'code' => Transaction::generateUniqueCode(),
-                'amount' => $feeToDebit,
+                'amount' => $feeToCredit,
+                'exchange_rate_applied' => $feeExchangeRateApplied,
                 'employee_id' => null,
                 'type' => TransactionType::QrPaymentFee,
                 'status' => TransactionStatus::Completed,
             ]);
 
             $payingAccount->decrement('balance', $feeToDebit);
-            $feesAccount->increment('balance', $feeToDebit);
+            $feesAccount->increment('balance', $feeToCredit);
         }
 
         return $debitMain;
