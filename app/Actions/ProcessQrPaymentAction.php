@@ -76,6 +76,10 @@ class ProcessQrPaymentAction
                 throw new TransactionRejectedException('Ce type de compte ne peut pas etre utilise pour un paiement QR.');
             }
 
+            if ((bool) $payingAccount->typeOfAccount->duration > 0) {
+                throw new TransactionRejectedException('Ce type de compte ne peut pas etre utilise pour un paiement QR.');
+            }
+
             $merchant = $paymentRequest->merchantProfile()->lockForUpdate()->first();
             $merchantAccount = $merchant->account()->with('currency')->lockForUpdate()->first();
 
