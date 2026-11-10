@@ -359,16 +359,22 @@ class CustomerForm
                 ->schema([
                     Section::make()
                         ->schema([
-                            Select::make('phonecode')
-                                ->label(__("myfinance.phone_code"))
-                                ->options(fn () => Country::query()
-                                    ->pluck('phonecode', 'phonecode'))
-                                ->default(fn () => Country::where('name', 'Haiti')->value('phonecode'))
-                                ->preload()
-                                ->searchable()
-                                ->live()
-                                ->required(fn (Get $get): bool => filled($get('phone_number')))
-                                ->dehydrated(),
+                           Select::make('phonecode')
+                            ->label(__("myfinance.phone_code"))
+                            ->options(fn () => Country::query()
+                                ->whereNotNull('phonecode')
+                                ->orderBy('name')
+                                ->get(['name', 'phonecode'])
+                                ->groupBy('phonecode')
+                                ->map(fn ($countries, $code) => '+' . ltrim((string) $code, '+') . ' — ' . $countries->pluck('name')->implode(', '))
+                                ->all())
+                            ->getOptionLabelUsing(fn ($value) => filled($value) ? '+' . ltrim((string) $value, '+') : null)
+                            ->default(fn () => Country::where('name', 'Haiti')->value('phonecode'))
+                            ->preload()
+                            ->searchable()
+                            ->live()
+                            ->required(fn (Get $get): bool => filled($get('phone_number')))
+                            ->dehydrated(),
 
                             TextInput::make('phone_number')
                                 ->label(__("myfinance.phone")),

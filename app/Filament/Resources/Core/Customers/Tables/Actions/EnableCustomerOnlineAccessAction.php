@@ -16,10 +16,10 @@ class EnableCustomerOnlineAccessAction
     public static function make(): Action
     {
         return Action::make('enableOnlineAccess')
-            ->label(fn (Customer $record) => $record->is_online ? 'Acces en ligne actif' : 'Activer l\'acces en ligne')
+            ->label(fn (Customer $record) => $record->isActivated() ? 'Acces en ligne actif' : 'Activer l\'acces en ligne')
             ->icon('heroicon-o-signal')
-            ->color(fn (Customer $record) => $record->is_online ? 'gray' : 'success')
-            ->disabled(fn (Customer $record) => (bool) $record->is_online)
+            ->color(fn (Customer $record) => $record->isActivated() ? 'gray' : 'success')
+            ->disabled(fn (Customer $record) => (bool) $record->isActivated())
             ->visible(fn (Customer $record) => auth()->user()->can('customers.enable_online_access'))
             ->requiresConfirmation(fn (Customer $record) => filled($record->email) || filled($record->phone_number))
             ->modalHeading('Activer l\'acces en ligne')

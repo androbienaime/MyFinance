@@ -117,7 +117,8 @@ return [
     'nationality' => 'Nationality',
     'marital_status' => 'Marital Status',
     'occupation' => 'Occupation',
-    'update' => 'Update'
+    'update' => 'Update',
+    'fee_amount' => 'Fee Amount'
 
     
 ];
