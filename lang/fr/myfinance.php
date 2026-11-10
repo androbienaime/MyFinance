@@ -124,5 +124,8 @@ return [
     'nationality' => 'Nationalite',
     'marital_status' => 'Situation matrimoniale',
     'occupation' => 'Profession',
-    'update' => 'Mise à jour'
+    'update' => 'Mise à jour',
+    'fee_amount' => 'Frais (Montant)',
+    'fee_percentage' => 'Frais (Pourcentage)',
+    'fee_tiers' => 'Paliers de frais',
 ];
