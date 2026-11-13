@@ -19,6 +19,8 @@ class LatestReportsWidget extends BaseWidget
     protected static ?int $sort = 5;
 
     protected int|string|array $columnSpan = 'full';
+    
+    protected static bool $isLazy = false;
 
     // protected string|null $heading = 'Derniers rapports';
 
